@@ -1,0 +1,529 @@
+{
+  "info": {
+    "name": "Mla3ebna V2 API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/v1" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "google_id_token", "value": "" },
+    { "key": "apple_id_token", "value": "" },
+    { "key": "field_id", "value": "" },
+    { "key": "booking_id", "value": "" },
+    { "key": "payment_id", "value": "" },
+    { "key": "payout_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": { "method": "GET", "url": { "raw": "http://localhost:3000/health", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["health"] } }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/oauth (Google)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"provider\": \"google\",\n  \"id_token\": \"{{google_id_token}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/oauth", "host": ["{{baseUrl}}"], "path": ["auth", "oauth"] }
+          }
+        },
+        {
+          "name": "POST /auth/oauth (Apple)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"provider\": \"apple\",\n  \"id_token\": \"{{apple_id_token}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/oauth", "host": ["{{baseUrl}}"], "path": ["auth", "oauth"] }
+          }
+        },
+        {
+          "name": "POST /auth/complete-profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"email\": \"test@example.com\",\n  \"role\": \"player\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/complete-profile", "host": ["{{baseUrl}}"], "path": ["auth", "complete-profile"] }
+          }
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fields",
+      "item": [
+        {
+          "name": "GET /fields",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields", "host": ["{{baseUrl}}"], "path": ["fields"] } }
+        },
+        {
+          "name": "GET /fields/:id",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields/{{field_id}}", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}"] } }
+        },
+        {
+          "name": "GET /fields/:id/slots?date=YYYY-MM-DD",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/slots?date=2026-01-01", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "slots"], "query": [{ "key": "date", "value": "2026-01-01" }] }
+          }
+        },
+        {
+          "name": "GET /fields/:id/reviews",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/reviews", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "reviews"] } }
+        },
+        {
+          "name": "GET /fields/favorites",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/fields/favorites", "host": ["{{baseUrl}}"], "path": ["fields", "favorites"] } }
+        },
+        {
+          "name": "POST /fields/:id/favorites",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/favorites", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "favorites"] } }
+        },
+        {
+          "name": "DELETE /fields/:id/favorites",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/favorites", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "favorites"] } }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "POST /bookings",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"field_id\": \"{{field_id}}\",\n  \"slot_id\": \"slot_1\",\n  \"date\": \"2026-01-01\",\n  \"payment_method\": \"card\"\n}" },
+            "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+          }
+        },
+        {
+          "name": "GET /bookings?status=upcoming",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings?status=upcoming", "host": ["{{baseUrl}}"], "path": ["bookings"], "query": [{ "key": "status", "value": "upcoming" }] }
+          }
+        },
+        {
+          "name": "GET /bookings/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{booking_id}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{booking_id}}"] }
+          }
+        },
+        {
+          "name": "DELETE /bookings/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/bookings/{{booking_id}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{booking_id}}"] }
+          }
+        },
+        {
+          "name": "POST /bookings/:id/review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Great!\"\n}" },
+            "url": { "raw": "{{baseUrl}}/bookings/{{booking_id}}/review", "host": ["{{baseUrl}}"], "path": ["bookings", "{{booking_id}}", "review"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "GET /payments/methods",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/payments/methods", "host": ["{{baseUrl}}"], "path": ["payments", "methods"] } }
+        },
+        {
+          "name": "POST /payments/initiate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"method\": \"card\"\n}" },
+            "url": { "raw": "{{baseUrl}}/payments/initiate", "host": ["{{baseUrl}}"], "path": ["payments", "initiate"] }
+          }
+        },
+        {
+          "name": "POST /payments/verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"payment_id\": \"{{payment_id}}\",\n  \"transaction_id\": \"tx_123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/payments/verify", "host": ["{{baseUrl}}"], "path": ["payments", "verify"] }
+          }
+        },
+        {
+          "name": "POST /webhooks/paymob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"event_id\": \"evt_123\",\n  \"payment_id\": \"{{payment_id}}\",\n  \"transaction_id\": \"tx_123\",\n  \"status\": \"paid\"\n}" },
+            "url": { "raw": "{{baseUrl}}/webhooks/paymob", "host": ["{{baseUrl}}"], "path": ["webhooks", "paymob"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "GET /profile",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/profile", "host": ["{{baseUrl}}"], "path": ["profile"] } }
+        },
+        {
+          "name": "PUT /profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profile", "host": ["{{baseUrl}}"], "path": ["profile"] }
+          }
+        },
+        {
+          "name": "PUT /profile/avatar (multipart)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] },
+            "url": { "raw": "{{baseUrl}}/profile/avatar", "host": ["{{baseUrl}}"], "path": ["profile", "avatar"] }
+          }
+        },
+        {
+          "name": "GET /profile/notifications",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/profile/notifications", "host": ["{{baseUrl}}"], "path": ["profile", "notifications"] } }
+        },
+        {
+          "name": "PUT /profile/notifications/read-all",
+          "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/profile/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["profile", "notifications", "read-all"] } }
+        },
+        {
+          "name": "PUT /profile/fcm-token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"fcm_test_token\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profile/fcm-token", "host": ["{{baseUrl}}"], "path": ["profile", "fcm-token"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Owner",
+      "item": [
+        {
+          "name": "POST /owner/fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Field\",\n  \"phone\": \"+201000000000\",\n  \"city\": \"Cairo\",\n  \"address\": \"Test address\",\n  \"lat\": 30.0,\n  \"lng\": 31.0\n}" },
+            "url": { "raw": "{{baseUrl}}/owner/fields", "host": ["{{baseUrl}}"], "path": ["owner", "fields"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Field Updated\",\n  \"area\": \"Nasr City\"\n}" },
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id/specs",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"sport\": \"football\",\n  \"surface\": \"artificial_grass\",\n  \"size\": \"5v5\",\n  \"amenities\": [\"parking\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/specs", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "specs"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id/photos (multipart)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": { "mode": "formdata", "formdata": [{ "key": "files", "type": "file", "src": "" }] },
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/photos", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "photos"] }
+          }
+        },
+        {
+          "name": "DELETE /owner/fields/:id/photos/:photoId",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/photos/photo_1", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "photos", "photo_1"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id/pricing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"price_per_hour\": 150,\n  \"peak_price_per_hour\": 200\n}" },
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/pricing", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "pricing"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id/schedule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"days\": [\n    {\"day\":\"saturday\",\"enabled\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"}\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/schedule", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "schedule"] }
+          }
+        },
+        {
+          "name": "PUT /owner/fields/:id/submit-for-review",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/submit-for-review", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "submit-for-review"] }
+          }
+        },
+        {
+          "name": "GET /owner/fields/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}"] }
+          }
+        },
+        {
+          "name": "GET /owner/bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/bookings?status=upcoming", "host": ["{{baseUrl}}"], "path": ["owner", "bookings"], "query": [{ "key": "status", "value": "upcoming" }] }
+          }
+        },
+        {
+          "name": "GET /owner/bookings/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/bookings/{{booking_id}}", "host": ["{{baseUrl}}"], "path": ["owner", "bookings", "{{booking_id}}"] }
+          }
+        },
+        {
+          "name": "PUT /owner/bookings/:id/confirm",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/bookings/{{booking_id}}/confirm", "host": ["{{baseUrl}}"], "path": ["owner", "bookings", "{{booking_id}}", "confirm"] }
+          }
+        },
+        {
+          "name": "DELETE /owner/bookings/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/bookings/{{booking_id}}", "host": ["{{baseUrl}}"], "path": ["owner", "bookings", "{{booking_id}}"] }
+          }
+        },
+        {
+          "name": "GET /owner/stats?period=today",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/stats?period=today", "host": ["{{baseUrl}}"], "path": ["owner", "stats"], "query": [{ "key": "period", "value": "today" }] }
+          }
+        },
+        {
+          "name": "GET /owner/stats/revenue",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/stats/revenue", "host": ["{{baseUrl}}"], "path": ["owner", "stats", "revenue"] }
+          }
+        },
+        {
+          "name": "GET /owner/notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/notifications", "host": ["{{baseUrl}}"], "path": ["owner", "notifications"] }
+          }
+        },
+        {
+          "name": "PUT /owner/notifications/read-all",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["owner", "notifications", "read-all"] }
+          }
+        },
+        {
+          "name": "GET /owner/wallet",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/owner/wallet", "host": ["{{baseUrl}}"], "path": ["owner", "wallet"] } }
+        },
+        {
+          "name": "GET /owner/ledger",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/owner/ledger", "host": ["{{baseUrl}}"], "path": ["owner", "ledger"] } }
+        },
+        {
+          "name": "GET /owner/payouts",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{baseUrl}}/owner/payouts", "host": ["{{baseUrl}}"], "path": ["owner", "payouts"] } }
+        },
+        {
+          "name": "POST /owner/payouts",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 100,\n  \"method\": \"bank_transfer\"\n}" },
+            "url": { "raw": "{{baseUrl}}/owner/payouts", "host": ["{{baseUrl}}"], "path": ["owner", "payouts"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /admin/fields?status=pending_review",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/fields?status=pending_review",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "fields"],
+              "query": [{ "key": "status", "value": "pending_review" }]
+            }
+          }
+        },
+        {
+          "name": "PUT /admin/fields/:id/approve",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/fields/{{field_id}}/approve", "host": ["{{baseUrl}}"], "path": ["admin", "fields", "{{field_id}}", "approve"] }
+          }
+        },
+        {
+          "name": "PUT /admin/fields/:id/reject",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Missing photos\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/fields/{{field_id}}/reject", "host": ["{{baseUrl}}"], "path": ["admin", "fields", "{{field_id}}", "reject"] }
+          }
+        },
+        {
+          "name": "GET /admin/payouts?status=requested",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/payouts?status=requested",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "payouts"],
+              "query": [{ "key": "status", "value": "requested" }]
+            }
+          }
+        },
+        {
+          "name": "PUT /admin/payouts/:id/paid",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"provider_ref\": \"bank_tx_123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/payouts/{{payout_id}}/paid", "host": ["{{baseUrl}}"], "path": ["admin", "payouts", "{{payout_id}}", "paid"] }
+          }
+        },
+        {
+          "name": "PUT /admin/payouts/:id/failed",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Bank rejected\"\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/payouts/{{payout_id}}/failed", "host": ["{{baseUrl}}"], "path": ["admin", "payouts", "{{payout_id}}", "failed"] }
+          }
+        }
+      ]
+    }
+  ]
+}

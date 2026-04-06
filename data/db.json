@@ -1,0 +1,140 @@
+{
+  "users": [
+    {
+      "id": "user_player_1",
+      "phone": "+201000000001",
+      "role": "player",
+      "first_name": "أحمد",
+      "last_name": "علي",
+      "email": "ahmed@example.com",
+      "avatar_url": null,
+      "favorites": [],
+      "fcm_token": null,
+      "created_at": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "user_owner_1",
+      "phone": "+201000000002",
+      "role": "owner",
+      "first_name": "محمد",
+      "last_name": "حسن",
+      "email": "owner@example.com",
+      "avatar_url": null,
+      "favorites": [],
+      "fcm_token": null,
+      "created_at": "2026-03-01T10:00:00.000Z"
+    }
+  ],
+  "otp": [],
+  "refresh_tokens": [
+    {
+      "token": "eb321a06beabb80743f69d35cd2819d4db3dbb5",
+      "user_id": "user_player_1",
+      "revoked_at": null,
+      "created_at": "2026-04-02T10:18:46.069Z",
+      "expires_at": "2026-05-02T10:18:46.069Z"
+    }
+  ],
+  "fields": [
+    {
+      "id": "field_abc123",
+      "owner_id": "user_owner_1",
+      "status": "active",
+      "name": "ملعب النجوم",
+      "phone": "+201000000002",
+      "city": "القاهرة",
+      "area": "مدينة نصر",
+      "address": "شارع عباس العقاد",
+      "lat": 30.0626,
+      "lng": 31.3219,
+      "sport": "football",
+      "surface": "artificial_grass",
+      "size": "5v5",
+      "price_per_hour": 150,
+      "peak_price_per_hour": 200,
+      "amenities": [
+        "lighting",
+        "parking",
+        "cafe"
+      ],
+      "is_covered": true,
+      "cover_image_url": "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=60",
+      "photos": [],
+      "schedule": [
+        {
+          "day": "saturday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "sunday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "monday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "tuesday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "wednesday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "thursday",
+          "enabled": true,
+          "open_time": "08:00",
+          "close_time": "24:00"
+        },
+        {
+          "day": "friday",
+          "enabled": false
+        }
+      ],
+      "rating": 4.8,
+      "review_count": 47,
+      "created_at": "2026-03-01T10:00:00.000Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "review_1",
+      "field_id": "field_abc123",
+      "user_id": "user_player_1",
+      "rating": 5,
+      "comment": "ملعب ممتاز وخدمة رائعة",
+      "created_at": "2026-03-03T10:00:00.000Z"
+    }
+  ],
+  "bookings": [],
+  "payments": [],
+  "notifications": [
+    {
+      "id": "notif_1",
+      "user_id": "user_player_1",
+      "title": "مرحباً بك",
+      "body": "تم إنشاء حسابك بنجاح",
+      "read_at": null,
+      "created_at": "2026-03-01T10:00:00.000Z"
+    },
+    {
+      "id": "notif_owner_1",
+      "user_id": "user_owner_1",
+      "title": "تم إضافة ملعب",
+      "body": "ملعبك جاهز للتفعيل",
+      "read_at": null,
+      "created_at": "2026-03-01T10:00:00.000Z"
+    }
+  ]
+}
