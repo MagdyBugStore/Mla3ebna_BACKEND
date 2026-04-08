@@ -1,10 +1,37 @@
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Booking = require('../models/Booking');
+const AuthIdentity = require('../models/AuthIdentity');
 
 async function getProfile(userId) {
   const user = await User.findById(userId);
   if (!user) return null;
   return user;
+}
+
+async function getProfileView(userId) {
+  const user = await User.findById(userId).lean();
+  if (!user) return null;
+
+  const total_bookings = await Booking.countDocuments({
+    user_id: userId,
+    status: { $nin: ['cancelled_by_player', 'cancelled_by_owner'] }
+  });
+  const favorites_count = Array.isArray(user.favorites) ? user.favorites.length : 0;
+
+  const identities = await AuthIdentity.find({ user_id: userId }).select({ provider: 1 }).lean();
+  const connected_providers = Array.from(new Set((identities || []).map((i) => String(i.provider)).filter(Boolean))).filter((p) => p !== 'otp');
+
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    avatar_url: user.avatar_url,
+    role: user.role,
+    stats: { total_bookings, favorites_count },
+    connected_providers
+  };
 }
 
 async function updateProfile(userId, { first_name, last_name, email }) {
@@ -40,10 +67,10 @@ async function listNotifications(userId, { page, limit }) {
       title: n.title,
       body: n.body,
       data: n.data || null,
-      read_at: n.read_at,
+      is_read: Boolean(n.read_at),
       created_at: n.created_at
     })),
-    meta: { page, limit, total }
+    meta: { page, total }
   };
 }
 
@@ -67,6 +94,6 @@ async function updateFcmToken(userId, token) {
   return user;
 }
 
-module.exports = { getProfile, updateProfile, updateAvatar, listNotifications, readAllNotifications, updateFcmToken };
+module.exports = { getProfile, getProfileView, updateProfile, updateAvatar, listNotifications, readAllNotifications, updateFcmToken };
 
 export {};

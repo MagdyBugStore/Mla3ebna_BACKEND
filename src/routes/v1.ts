@@ -12,16 +12,18 @@ const { upload } = require('../config/upload');
 function buildV1Router() {
   const v1 = express.Router();
 
-  v1.post('/auth/oauth', authController.oauth);
+  v1.post('/auth/social', authController.social);
+  v1.post('/auth/oauth', authController.social);
   v1.post('/auth/complete-profile', requireAuth, authController.completeProfile);
   v1.post('/auth/refresh', authController.refresh);
   v1.post('/auth/logout', requireAuth, authController.logout);
+  v1.put('/auth/fcm-token', requireAuth, authController.fcmToken);
 
-  v1.get('/fields', optionalAuth, fieldsController.list);
+  v1.get('/fields', requireAuth, fieldsController.list);
   v1.get('/fields/favorites', requireAuth, fieldsController.favoritesList);
-  v1.get('/fields/:id', optionalAuth, fieldsController.getById);
-  v1.get('/fields/:id/reviews', fieldsController.listReviews);
-  v1.get('/fields/:id/slots', fieldsController.slots);
+  v1.get('/fields/:id', requireAuth, fieldsController.getById);
+  v1.get('/fields/:id/reviews', requireAuth, fieldsController.listReviews);
+  v1.get('/fields/:id/slots', requireAuth, fieldsController.slots);
   v1.post('/fields/:id/favorites', requireAuth, fieldsController.favoritesAdd);
   v1.delete('/fields/:id/favorites', requireAuth, fieldsController.favoritesRemove);
 
@@ -31,7 +33,7 @@ function buildV1Router() {
   v1.delete('/bookings/:id', requireAuth, bookingsController.cancel);
   v1.post('/bookings/:id/review', requireAuth, bookingsController.review);
 
-  v1.get('/payments/methods', paymentsController.methods);
+  v1.get('/payments/methods', requireAuth, paymentsController.methods);
   v1.post('/payments/initiate', requireAuth, paymentsController.initiate);
   v1.post('/payments/verify', requireAuth, paymentsController.verify);
 
@@ -45,8 +47,10 @@ function buildV1Router() {
   v1.put('/profile/fcm-token', requireAuth, profileController.fcmToken);
 
   v1.post('/owner/fields', requireAuth, requireRole('owner'), ownerController.createField);
+  v1.get('/owner/fields/me', requireAuth, requireRole('owner'), ownerController.getMyField);
   v1.put('/owner/fields/:id', requireAuth, requireRole('owner'), ownerController.updateField);
   v1.put('/owner/fields/:id/specs', requireAuth, requireRole('owner'), ownerController.specs);
+  v1.post('/owner/fields/:id/photos', requireAuth, requireRole('owner'), upload.array('files', 10), ownerController.photos);
   v1.put('/owner/fields/:id/photos', requireAuth, requireRole('owner'), upload.array('files', 10), ownerController.photos);
   v1.delete('/owner/fields/:id/photos/:photoId', requireAuth, requireRole('owner'), ownerController.deletePhoto);
   v1.put('/owner/fields/:id/pricing', requireAuth, requireRole('owner'), ownerController.pricing);
@@ -56,6 +60,7 @@ function buildV1Router() {
 
   v1.get('/owner/bookings', requireAuth, requireRole('owner'), ownerController.listBookings);
   v1.get('/owner/bookings/:id', requireAuth, requireRole('owner'), ownerController.getBooking);
+  v1.put('/owner/bookings/:id/confirm-attendance', requireAuth, requireRole('owner'), ownerController.confirmBooking);
   v1.put('/owner/bookings/:id/confirm', requireAuth, requireRole('owner'), ownerController.confirmBooking);
   v1.delete('/owner/bookings/:id', requireAuth, requireRole('owner'), ownerController.cancelBooking);
 

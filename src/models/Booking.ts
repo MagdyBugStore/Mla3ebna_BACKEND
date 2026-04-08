@@ -26,13 +26,13 @@ const BookingSchema = new mongoose.Schema(
     reference: { type: String, required: true, index: true },
     status: {
       type: String,
-      enum: ['pending_payment', 'confirmed', 'cancelled', 'completed', 'no_show'],
-      default: 'confirmed',
+      enum: ['pending', 'confirmed', 'attended', 'cancelled_by_player', 'cancelled_by_owner'],
+      default: 'pending',
       index: true
     },
     payment_status: {
       type: String,
-      enum: ['unpaid', 'pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
+      enum: ['unpaid', 'paid', 'refunded'],
       default: 'unpaid',
       index: true
     },
@@ -52,7 +52,7 @@ const BookingSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
 
-BookingSchema.index({ field_id: 1, date: 1, start_time: 1, end_time: 1, status: 1 });
+BookingSchema.index({ field_id: 1, date: 1, start_time: 1 }, { unique: true });
 BookingSchema.index({ user_id: 1, status: 1, date: 1 });
 BookingSchema.index({ owner_id: 1, status: 1, date: 1 });
 

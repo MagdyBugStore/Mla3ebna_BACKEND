@@ -50,7 +50,7 @@ async function finalizePaidPayment({ payment, booking, provider, event_id, paylo
   }
 
   if (booking.payment_status !== 'paid') booking.payment_status = 'paid';
-  if (booking.status === 'pending_payment') booking.status = 'confirmed';
+  if (booking.status === 'pending') booking.status = 'confirmed';
   await booking.save();
 
   const field = await Field.findById(booking.field_id).lean();
@@ -117,8 +117,6 @@ async function initiatePayment(userId, { booking_id, method, card_token }) {
   const ownerId = booking.owner_id || field?.owner_id || null;
   if (!booking.owner_id && ownerId) booking.owner_id = ownerId;
 
-  booking.payment_status = 'pending';
-  if (booking.status !== 'pending_payment') booking.status = 'pending_payment';
   await booking.save();
 
   const payment = await Payment.create({
@@ -218,7 +216,7 @@ function listMethods() {
     data: [
       { id: 'card', label: 'Card' },
       { id: 'fawry', label: 'Fawry' },
-      { id: 'vodafone', label: 'Vodafone Cash' },
+      { id: 'vodafone_cash', label: 'Vodafone Cash' },
       { id: 'instapay', label: 'InstaPay' },
       { id: 'cash', label: 'Cash' }
     ]

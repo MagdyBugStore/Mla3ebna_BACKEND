@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
 const { errorResponse } = require('../utils/http');
+const User = require('../models/User');
 
 function requireAuth(req: any, res: any, next: any) {
   const header = req.headers.authorization || '';
@@ -8,7 +9,7 @@ function requireAuth(req: any, res: any, next: any) {
   if (!m) return errorResponse(res, 401, 'Unauthorized');
   try {
     const payload = jwt.verify(m[1], env.jwtSecret);
-    req.auth = { userId: payload.sub, role: payload.role };
+    req.auth = { userId: payload.sub, role: payload.role || null };
     return next();
   } catch (_e) {
     return errorResponse(res, 401, 'Unauthorized');
@@ -16,9 +17,11 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 function requireRole(role: string) {
-  return (req: any, res: any, next: any) => {
+  return async (req: any, res: any, next: any) => {
     if (!req.auth) return errorResponse(res, 401, 'Unauthorized');
-    if (req.auth.role !== role) return errorResponse(res, 403, 'Forbidden');
+    const user = await User.findById(req.auth.userId).select({ role: 1 }).lean();
+    if (!user) return errorResponse(res, 401, 'Unauthorized');
+    if (user.role !== role) return errorResponse(res, 403, 'Forbidden');
     return next();
   };
 }

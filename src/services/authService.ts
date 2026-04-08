@@ -154,7 +154,8 @@ async function verifyOtp({ phone, otp }: any) {
     expires_at: new Date(Date.now() + env.refreshTokenTtlSeconds * 1000)
   });
 
-  return { ok: true, user, refresh_token };
+  const is_new_user = !user.profile_completed_at;
+  return { ok: true, user, refresh_token, is_new_user };
 }
 
 async function completeProfile(userId: string, { first_name, last_name, email, role }: any) {

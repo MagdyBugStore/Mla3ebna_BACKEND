@@ -25,7 +25,7 @@ async function getOrCreateOwnerWallet(ownerId) {
   return wallet;
 }
 
-async function createBooking(userId, { field_id, slot_id, date, payment_method }) {
+async function createBooking(userId, { field_id, date, start_time, end_time, payment_method }) {
   const user = await User.findById(userId).lean();
   if (!user) return { ok: false, status: 401 };
 
@@ -33,32 +33,38 @@ async function createBooking(userId, { field_id, slot_id, date, payment_method }
   if (!field) return { ok: false, status: 404 };
   if (field.status !== 'active') return { ok: false, status: 404 };
 
-  const existingBookings = await Booking.find({ field_id, date, status: { $ne: 'cancelled' } }).lean();
+  const existingBookings = await Booking.find({ field_id, date, status: { $nin: ['cancelled_by_player', 'cancelled_by_owner'] } }).lean();
   const slotsResult = buildSlotsForDate({ ...field, id: field._id.toString() }, existingBookings, date);
-  if (!slotsResult) return { ok: false, status: 400, errors: { date: 'invalid' } };
-  const slot = slotsResult.slots.find((s) => s.id === slot_id);
-  if (!slot) return { ok: false, status: 400, errors: { slot_id: 'invalid' } };
-  if (slot.status !== 'available') return { ok: false, status: 409, message: 'Slot not available' };
+  if (!slotsResult) return { ok: false, status: 422, errors: { date: 'invalid' } };
+  const slot = slotsResult.slots.find((s) => s.start_time === start_time && s.end_time === end_time);
+  if (!slot) return { ok: false, status: 422, errors: { start_time: 'invalid', end_time: 'invalid' } };
+  if (slot.status !== 'available') return { ok: false, status: 409, message: 'Slot already booked' };
 
   const startMinutes = Number(slot.start_time.slice(0, 2)) * 60 + Number(slot.start_time.slice(3, 5));
   const total_price = isPeakTime(startMinutes) ? field.peak_price_per_hour : field.price_per_hour;
 
-  const booking = await Booking.create({
-    reference: makeBookingReference(),
-    status: 'pending_payment',
-    payment_status: 'unpaid',
-    user_id: userId,
-    owner_id: field.owner_id || null,
-    field_id: field._id.toString(),
-    date,
-    start_time: slot.start_time,
-    end_time: slot.end_time,
-    total_price,
-    payment_method,
-    price: { subtotal: total_price, fees: 0, discount: 0, total: total_price, currency: 'EGP' },
-    cancel: { cancelled_at: null, cancelled_by: null, policy: null, refund_amount: 0 },
-    attended_at: null
-  });
+  let booking;
+  try {
+    booking = await Booking.create({
+      reference: makeBookingReference(),
+      status: 'pending',
+      payment_status: 'unpaid',
+      user_id: userId,
+      owner_id: field.owner_id || null,
+      field_id: field._id.toString(),
+      date,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      total_price,
+      payment_method,
+      price: { subtotal: total_price, fees: 0, discount: 0, total: total_price, currency: 'EGP' },
+      cancel: { cancelled_at: null, cancelled_by: null, policy: null, refund_amount: 0 },
+      attended_at: null
+    });
+  } catch (e: any) {
+    if (e && e.code === 11000) return { ok: false, status: 409, message: 'Slot already booked' };
+    throw e;
+  }
 
   await Notification.create({
     user_id: userId,
@@ -76,9 +82,10 @@ async function listMyBookings(userId, { status, page, limit }) {
   const all = await Booking.find({ user_id: userId }).sort({ created_at: -1 }).lean();
   const todayStr = new Date().toISOString().slice(0, 10);
   let items = all;
-  if (status === 'upcoming') items = all.filter((b) => b.status !== 'cancelled' && b.date >= todayStr);
-  if (status === 'past') items = all.filter((b) => b.status !== 'cancelled' && b.date < todayStr);
-  if (status === 'cancelled') items = all.filter((b) => b.status === 'cancelled');
+  const isCancelled = (s) => s === 'cancelled_by_player' || s === 'cancelled_by_owner';
+  if (status === 'upcoming') items = all.filter((b) => !isCancelled(b.status) && b.date >= todayStr);
+  if (status === 'past') items = all.filter((b) => !isCancelled(b.status) && b.date < todayStr);
+  if (status === 'cancelled') items = all.filter((b) => isCancelled(b.status));
 
   const total = items.length;
   const slice = items.slice((page - 1) * limit, page * limit);
@@ -96,12 +103,12 @@ async function listMyBookings(userId, { status, page, limit }) {
       date: b.date,
       start_time: b.start_time,
       end_time: b.end_time,
-      total_price: b.total_price,
-      field: f ? { id: f._id.toString(), name: f.name, cover_image_url: f.cover_image_url, city: f.city, area: f.area } : null
+      price: b.total_price,
+      field: f ? { id: f._id.toString(), name: f.name, area: f.area, cover_image_url: f.cover_image_url } : null
     };
   });
 
-  return { data, meta: { page, limit, total } };
+  return { data, meta: { page, total } };
 }
 
 async function getMyBookingById(userId, bookingId) {
@@ -116,7 +123,7 @@ async function getMyBookingById(userId, bookingId) {
     date: booking.date,
     start_time: booking.start_time,
     end_time: booking.end_time,
-    total_price: booking.total_price,
+    price: booking.total_price,
     payment_method: booking.payment_method,
     created_at: booking.created_at,
     cancel: booking.cancel || null,
@@ -139,7 +146,7 @@ async function getMyBookingById(userId, bookingId) {
 async function cancelMyBooking(userId, bookingId) {
   const booking = await Booking.findOne({ _id: bookingId, user_id: userId });
   if (!booking) return { ok: false, status: 404 };
-  if (booking.status === 'cancelled') return { ok: true };
+  if (booking.status === 'cancelled_by_player') return { ok: true };
 
   const field = await Field.findById(booking.field_id).lean();
   const ownerId = booking.owner_id || field?.owner_id || null;
@@ -149,7 +156,7 @@ async function cancelMyBooking(userId, bookingId) {
   const policy = hoursDiff >= 24 ? 'gt_24h' : 'lt_24h';
   const refundAmount = booking.payment_status === 'paid' && policy === 'gt_24h' ? Number(booking.total_price || 0) : 0;
 
-  booking.status = 'cancelled';
+  booking.status = 'cancelled_by_player';
   booking.cancel = {
     cancelled_at: new Date(),
     cancelled_by: userId,
@@ -232,7 +239,7 @@ async function submitReview(userId, bookingId, { rating, comment }) {
     comment: comment || null
   });
   booking.review_id = review.id;
-  if (booking.attended_at && booking.status !== 'cancelled') booking.status = 'completed';
+  if (booking.attended_at && booking.status !== 'cancelled_by_player' && booking.status !== 'cancelled_by_owner') booking.status = 'attended';
   await booking.save();
   return { ok: true, review };
 }

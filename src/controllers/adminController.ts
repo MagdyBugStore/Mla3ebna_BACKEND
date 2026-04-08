@@ -17,7 +17,7 @@ async function approveField(req: any, res: any) {
 
 async function rejectField(req: any, res: any) {
   const reason = req.body?.reason ?? null;
-  if (!validateRequiredString(reason)) return errorResponse(res, 400, 'Validation error', { reason: 'required' });
+  if (!validateRequiredString(reason)) return errorResponse(res, 422, 'Validation failed', { reason: 'required' });
   const field = await adminService.rejectField(req.auth.userId, req.params.id, String(reason).trim());
   if (!field) return errorResponse(res, 404, 'Not found');
   return res.json({ success: true, status: field.status });

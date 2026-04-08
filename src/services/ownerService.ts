@@ -25,14 +25,14 @@ async function getOrCreateOwnerWallet(ownerId) {
   return wallet;
 }
 
-async function createField(ownerId, { name, phone, city, address, lat, lng }) {
+async function createField(ownerId, { name, phone, city, area, address, lat, lng }) {
   const field = await Field.create({
     owner_id: ownerId,
-    status: 'draft',
+    status: 'pending',
     name,
     phone,
     city,
-    area: null,
+    area: area || null,
     address,
     lat,
     lng,
@@ -150,17 +150,24 @@ async function getOwnerField(ownerId, fieldId) {
   return field;
 }
 
+async function getMyField(ownerId) {
+  const field = await Field.findOne({ owner_id: ownerId }).sort({ created_at: -1 }).lean();
+  if (!field) return null;
+  return field;
+}
+
 async function listOwnerBookings(ownerId, { status, date, page, limit }) {
   const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
   const filter: any = { $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }] };
   if (date) filter.date = date;
-  if (status === 'cancelled') filter.status = 'cancelled';
+  if (status === 'cancelled') filter.status = { $in: ['cancelled_by_player', 'cancelled_by_owner'] };
 
   const all = await Booking.find(filter).sort({ created_at: -1 }).lean();
   const todayStr = new Date().toISOString().slice(0, 10);
   let items = all;
-  if (status === 'upcoming') items = all.filter((b) => b.status !== 'cancelled' && b.date >= todayStr);
-  if (status === 'past') items = all.filter((b) => b.status !== 'cancelled' && b.date < todayStr);
+  const isCancelled = (s) => s === 'cancelled_by_player' || s === 'cancelled_by_owner';
+  if (status === 'upcoming') items = all.filter((b) => !isCancelled(b.status) && b.date >= todayStr);
+  if (status === 'past') items = all.filter((b) => !isCancelled(b.status) && b.date < todayStr);
 
   const total = items.length;
   const slice = items.slice((page - 1) * limit, page * limit);
@@ -175,6 +182,7 @@ async function listOwnerBookings(ownerId, { status, date, page, limit }) {
   const data = slice.map((b) => {
     const field = fieldMap.get(b.field_id) || null;
     const user = userMap.get(b.user_id) || null;
+    const masked = user?.phone ? `01x-xxxx-${String(b.reference || '').slice(-4).padStart(4, '0')}` : null;
     return {
       id: b._id.toString(),
       reference: b.reference,
@@ -183,13 +191,15 @@ async function listOwnerBookings(ownerId, { status, date, page, limit }) {
       date: b.date,
       start_time: b.start_time,
       end_time: b.end_time,
-      total_price: b.total_price,
+      price: b.total_price,
       field: field ? { id: field._id.toString(), name: field.name } : null,
-      player: user ? { id: user._id.toString(), first_name: user.first_name, last_name: user.last_name, phone: user.phone, avatar_url: user.avatar_url } : null
+      player: user
+        ? { id: user._id.toString(), first_name: user.first_name, last_name: user.last_name, avatar_url: user.avatar_url, phone_masked: masked }
+        : null
     };
   });
 
-  return { data, meta: { page, limit, total } };
+  return { data, meta: { page, total } };
 }
 
 async function getOwnerBookingById(ownerId, bookingId) {
@@ -221,7 +231,7 @@ async function confirmAttendance(ownerId, bookingId) {
   const booking = await Booking.findOne({ _id: bookingId, $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }] });
   if (!booking) return null;
   booking.attended_at = new Date();
-  if (booking.status !== 'cancelled') booking.status = 'completed';
+  if (booking.status !== 'cancelled_by_player' && booking.status !== 'cancelled_by_owner') booking.status = 'attended';
   await booking.save();
   return booking;
 }
@@ -230,14 +240,14 @@ async function cancelBooking(ownerId, bookingId) {
   const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
   const booking = await Booking.findOne({ _id: bookingId, $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }] });
   if (!booking) return false;
-  if (booking.status === 'cancelled') return true;
+  if (booking.status === 'cancelled_by_owner' || booking.status === 'cancelled_by_player') return true;
 
   const startUtc = parseBookingStartUtc(booking.date, booking.start_time);
   const hoursDiff = startUtc ? (startUtc.getTime() - Date.now()) / (60 * 60 * 1000) : 0;
   const policy = hoursDiff >= 24 ? 'gt_24h' : 'lt_24h';
   const refundAmount = booking.payment_status === 'paid' && policy === 'gt_24h' ? Number(booking.total_price || 0) : 0;
 
-  booking.status = 'cancelled';
+  booking.status = 'cancelled_by_owner';
   booking.cancel = {
     cancelled_at: new Date(),
     cancelled_by: ownerId,
@@ -401,55 +411,42 @@ async function requestPayout(ownerId, { amount, method }) {
 
 async function getStats(ownerId, period) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  let fromStr = todayStr;
-  if (period === 'week') {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - 7);
-    fromStr = d.toISOString().slice(0, 10);
-  } else if (period === 'month') {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - 30);
-    fromStr = d.toISOString().slice(0, 10);
-  }
+  const p = ['today', 'week', 'month'].includes(String(period)) ? String(period) : 'today';
+  let days = 1;
+  if (p === 'week') days = 7;
+  if (p === 'month') days = 30;
 
-  const fromDate = new Date(`${fromStr}T00:00:00.000Z`);
-  const toDate = new Date(`${todayStr}T23:59:59.999Z`);
-  const wallet = await WalletAccount.findOne({ owner_id: ownerId }).lean();
-  const hasLedger = wallet ? (await LedgerEntry.countDocuments({ account_id: wallet._id.toString(), occurred_at: { $gte: fromDate, $lte: toDate } })) > 0 : false;
+  const end = new Date(`${todayStr}T00:00:00.000Z`);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  const fromStr = start.toISOString().slice(0, 10);
 
-  let total_bookings = 0;
-  let total_revenue = 0;
-  if (wallet && hasLedger) {
-    const credits = await LedgerEntry.find({
-      account_id: wallet._id.toString(),
-      occurred_at: { $gte: fromDate, $lte: toDate },
-      direction: 'credit'
-    }).lean();
-    const debits = await LedgerEntry.find({
-      account_id: wallet._id.toString(),
-      occurred_at: { $gte: fromDate, $lte: toDate },
-      direction: 'debit'
-    }).lean();
+  const prevEnd = new Date(start);
+  prevEnd.setUTCDate(prevEnd.getUTCDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setUTCDate(prevStart.getUTCDate() - (days - 1));
+  const prevFromStr = prevStart.toISOString().slice(0, 10);
+  const prevToStr = prevEnd.toISOString().slice(0, 10);
 
-    const creditSum = credits.reduce((s, e) => s + Number(e.amount || 0), 0);
-    const debitSum = debits.reduce((s, e) => s + Number(e.amount || 0), 0);
-    total_revenue = creditSum - debitSum;
+  const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
+  const filter = {
+    $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }],
+    status: { $nin: ['cancelled_by_player', 'cancelled_by_owner'] }
+  };
 
-    total_bookings = await Booking.countDocuments({
-      $or: [{ owner_id: ownerId }, { field_id: { $in: (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString()) } }],
-      status: { $ne: 'cancelled' },
-      date: { $gte: fromStr, $lte: todayStr }
-    });
-  } else {
-    const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
-    const bookings = await Booking.find({
-      $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }],
-      status: { $ne: 'cancelled' },
-      date: { $gte: fromStr, $lte: todayStr }
-    }).lean();
-    total_bookings = bookings.length;
-    total_revenue = bookings.reduce((s, b) => s + Number(b.total_price || 0), 0);
-  }
+  const currentBookings = await Booking.find({ ...filter, date: { $gte: fromStr, $lte: todayStr } }).lean();
+  const prevBookings = await Booking.find({ ...filter, date: { $gte: prevFromStr, $lte: prevToStr } }).lean();
+
+  const total_bookings = currentBookings.length;
+  const total_revenue = currentBookings.reduce((s, b) => s + Number(b.total_price || 0), 0);
+
+  const prev_total_bookings = prevBookings.length;
+  const prev_total_revenue = prevBookings.reduce((s, b) => s + Number(b.total_price || 0), 0);
+
+  const bookings_pct =
+    prev_total_bookings === 0 ? (total_bookings === 0 ? 0 : 100) : Math.round(((total_bookings - prev_total_bookings) / prev_total_bookings) * 100);
+  const revenue_pct =
+    prev_total_revenue === 0 ? (total_revenue === 0 ? 0 : 100) : Math.round(((total_revenue - prev_total_revenue) / prev_total_revenue) * 100);
 
   const fieldIdsForReviews = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
   const reviews = await Review.find({ field_id: { $in: fieldIdsForReviews } }).select({ rating: 1 }).lean();
@@ -459,50 +456,39 @@ async function getStats(ownerId, period) {
   const occupancy_rate = total_bookings === 0 ? 0 : Math.min(1, total_bookings / (7 * 16));
 
   return {
+    period: p,
     total_bookings,
     total_revenue,
     average_rating,
     review_count,
-    occupancy_rate
+    occupancy_rate,
+    delta: { bookings_pct, revenue_pct }
   };
 }
 
 async function getRevenue(ownerId, { from, to, group_by }) {
   const fromStr = from || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const toStr = to || new Date().toISOString().slice(0, 10);
-  const fromDate = new Date(`${fromStr}T00:00:00.000Z`);
-  const toDate = new Date(`${toStr}T23:59:59.999Z`);
-  const wallet = await WalletAccount.findOne({ owner_id: ownerId }).lean();
-  const hasLedger = wallet ? (await LedgerEntry.countDocuments({ account_id: wallet._id.toString(), occurred_at: { $gte: fromDate, $lte: toDate } })) > 0 : false;
+  const gb = ['day', 'week'].includes(String(group_by)) ? String(group_by) : 'day';
 
-  const buckets = {};
-  if (wallet && hasLedger) {
-    const entries = await LedgerEntry.find({
-      account_id: wallet._id.toString(),
-      occurred_at: { $gte: fromDate, $lte: toDate }
-    }).lean();
-    for (const e of entries) {
-      const iso = new Date(e.occurred_at).toISOString().slice(0, 10);
-      const key = group_by === 'week' ? `${iso.slice(0, 4)}-W${Math.ceil(Number(iso.slice(5, 7)) / 3)}` : iso;
-      const sign = e.direction === 'debit' ? -1 : 1;
-      buckets[key] = (buckets[key] || 0) + sign * Number(e.amount || 0);
-    }
-  } else {
-    const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
-    const bookings = await Booking.find({
-      $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }],
-      status: { $ne: 'cancelled' },
-      date: { $gte: fromStr, $lte: toStr }
-    }).lean();
-    for (const b of bookings) {
-      const key = group_by === 'week' ? `${b.date.slice(0, 4)}-W${Math.ceil(Number(b.date.slice(5, 7)) / 3)}` : b.date;
-      buckets[key] = (buckets[key] || 0) + Number(b.total_price || 0);
-    }
+  const fieldIds = (await Field.find({ owner_id: ownerId }).select({ _id: 1 }).lean()).map((f) => f._id.toString());
+  const bookings = await Booking.find({
+    $or: [{ owner_id: ownerId }, { field_id: { $in: fieldIds } }],
+    status: { $nin: ['cancelled_by_player', 'cancelled_by_owner'] },
+    date: { $gte: fromStr, $lte: toStr }
+  }).lean();
+
+  const buckets: any = {};
+  for (const b of bookings) {
+    const key = gb === 'week' ? `${b.date.slice(0, 4)}-W${Math.ceil(Number(b.date.slice(5, 7)) / 3)}` : b.date;
+    if (!buckets[key]) buckets[key] = { revenue: 0, bookings: 0 };
+    buckets[key].revenue += Number(b.total_price || 0);
+    buckets[key].bookings += 1;
   }
 
   const data = Object.keys(buckets)
     .sort()
-    .map((k) => ({ key: k, revenue: buckets[k] }));
+    .map((k) => ({ date: k, revenue: buckets[k].revenue, bookings: buckets[k].bookings }));
 
   return { data };
 }
@@ -522,10 +508,10 @@ async function listOwnerNotifications(ownerId, { page, limit }) {
       title: n.title,
       body: n.body,
       data: n.data || null,
-      read_at: n.read_at,
+      is_read: Boolean(n.read_at),
       created_at: n.created_at
     })),
-    meta: { page, limit, total }
+    meta: { page, total }
   };
 }
 
@@ -544,6 +530,7 @@ module.exports = {
   addPhotos,
   deletePhoto,
   getOwnerField,
+  getMyField,
   listOwnerBookings,
   getOwnerBookingById,
   confirmAttendance,

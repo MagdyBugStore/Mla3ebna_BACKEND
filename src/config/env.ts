@@ -12,7 +12,10 @@ const env = {
   otpTtlSeconds: numberFromEnv(process.env.OTP_TTL_SECONDS, 5 * 60),
   googleClientId: process.env.GOOGLE_CLIENT_ID || null,
   appleClientId: process.env.APPLE_CLIENT_ID || null,
-  corsOrigin: process.env.CORS_ORIGIN || '*'
+  corsOrigin: process.env.CORS_ORIGIN || '*',
+  logRequests: String(process.env.LOG_REQUESTS ?? 'true').toLowerCase() === 'true',
+  logRequestBody: String(process.env.LOG_REQUEST_BODY ?? 'false').toLowerCase() === 'true',
+  logResponseBody: String(process.env.LOG_RESPONSE_BODY ?? 'false').toLowerCase() === 'true'
 };
 
 module.exports = { env };

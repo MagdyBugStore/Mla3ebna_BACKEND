@@ -32,8 +32,9 @@ function parseTimeToMinutes(hhmm: any) {
 }
 
 function minutesToHHMM(minutes: number) {
-  const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-  const mm = String(minutes % 60).padStart(2, '0');
+  const normalized = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hh = String(Math.floor(normalized / 60)).padStart(2, '0');
+  const mm = String(normalized % 60).padStart(2, '0');
   return `${hh}:${mm}`;
 }
 
@@ -55,21 +56,25 @@ function buildSlotsForDate(field: any, bookings: any[], dateStr: string) {
   const openMin = parseTimeToMinutes(dayCfg.open_time || '08:00') ?? 8 * 60;
   const closeMin = parseTimeToMinutes(dayCfg.close_time || '24:00') ?? 24 * 60;
   const start = Math.max(0, Math.min(openMin, 24 * 60));
-  const end = Math.max(0, Math.min(closeMin, 24 * 60));
+  const endRaw = Math.max(0, Math.min(closeMin, 24 * 60));
+  const end = endRaw <= start ? endRaw + 24 * 60 : endRaw;
   if (end <= start) return { date: dateStr, slots: [] };
 
   const bookedSet = new Set(
     bookings
-      .filter((b: any) => b.status !== 'cancelled')
+      .filter((b: any) => b.status !== 'cancelled_by_player' && b.status !== 'cancelled_by_owner')
       .map((b: any) => `${b.start_time}-${b.end_time}`)
   );
 
   const slots = [];
+  const now = new Date();
   for (let t = start; t + 60 <= end; t += 60) {
     const start_time = minutesToHHMM(t);
     const end_time = minutesToHHMM(t + 60);
     const key = `${start_time}-${end_time}`;
-    const status = bookedSet.has(key) ? 'booked' : 'available';
+    let status = bookedSet.has(key) ? 'booked' : 'available';
+    const localStart = new Date(`${dateStr}T${start_time}:00`);
+    if (localStart.getTime() < now.getTime() && status === 'available') status = 'disabled';
     const is_peak = isPeakTime(t);
     const id = `slot_${field.id}_${dateStr}_${start_time.replace(':', '')}`;
     slots.push({ id, start_time, end_time, status, is_peak });

@@ -13,7 +13,7 @@ async function initiate(req: any, res: any) {
   const errors: any = {};
   if (!validateRequiredString(booking_id)) errors.booking_id = 'required';
   if (!validateRequiredString(method)) errors.method = 'required';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const result = await paymentsService.initiatePayment(req.auth.userId, {
     booking_id,
@@ -21,7 +21,13 @@ async function initiate(req: any, res: any) {
     card_token: validateRequiredString(card_token) ? String(card_token) : null
   });
   if (!result.ok) return errorResponse(res, result.status, result.status === 409 ? 'Conflict' : 'Not found');
-  return res.json({ payment_id: result.payment.id, status: result.payment.status });
+  return res.json({
+    payment_id: result.payment.id,
+    status: 'pending',
+    redirect_url: null,
+    amount: result.payment.amount || 0,
+    currency: result.payment.currency || 'EGP'
+  });
 }
 
 async function verify(req: any, res: any) {
@@ -30,15 +36,21 @@ async function verify(req: any, res: any) {
   const errors: any = {};
   if (!validateRequiredString(payment_id)) errors.payment_id = 'required';
   if (!validateRequiredString(transaction_id)) errors.transaction_id = 'required';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const result = await paymentsService.verifyPayment(req.auth.userId, { payment_id, transaction_id });
   if (!result.ok) return errorResponse(res, result.status, 'Not found');
+  const booking = result.booking;
   return res.json({
-    success: true,
-    status: result.payment.status,
-    booking_status: result.booking ? result.booking.status : null,
-    booking_payment_status: result.booking ? result.booking.payment_status : null
+    payment_id: result.payment.id,
+    status: result.payment.status === 'paid' ? 'success' : 'failed',
+    booking: booking
+      ? {
+          id: booking.id,
+          reference: booking.reference,
+          status: booking.status
+        }
+      : null
   });
 }
 
@@ -56,7 +68,7 @@ async function paymobWebhook(req: any, res: any) {
     status: validateRequiredString(status) ? String(status) : null,
     payload
   });
-  if (!result.ok) return errorResponse(res, result.status || 400, result.status === 404 ? 'Not found' : 'Validation error');
+  if (!result.ok) return errorResponse(res, result.status || 400, result.status === 404 ? 'Not found' : 'Validation failed');
   return res.json({ success: true, ignored: Boolean(result.ignored) });
 }
 

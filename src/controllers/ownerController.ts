@@ -3,26 +3,28 @@ const { errorResponse } = require('../utils/http');
 const ownerService = require('../services/ownerService');
 
 async function createField(req: any, res: any) {
-  const { name, phone, city, address, lat, lng } = req.body || {};
+  const { name, phone, city, area, address, lat, lng } = req.body || {};
   const errors: any = {};
   if (!validateRequiredString(name)) errors.name = 'required';
   if (!validateRequiredString(phone)) errors.phone = 'required';
   if (!validateRequiredString(city)) errors.city = 'required';
+  if (!validateRequiredString(area)) errors.area = 'required';
   if (!validateRequiredString(address)) errors.address = 'required';
   if (!Number.isFinite(Number(lat))) errors.lat = 'required';
   if (!Number.isFinite(Number(lng))) errors.lng = 'required';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const field = await ownerService.createField(req.auth.userId, {
     name: String(name).trim(),
     phone: String(phone).trim(),
     city: String(city).trim(),
+    area: String(area).trim(),
     address: String(address).trim(),
     lat: Number(lat),
     lng: Number(lng)
   });
 
-  return res.json({ id: field.id, status: field.status });
+  return res.status(201).json({ id: field.id, status: field.status, name: field.name });
 }
 
 async function updateField(req: any, res: any) {
@@ -45,7 +47,7 @@ async function pricing(req: any, res: any) {
   const errors: any = {};
   if (price_per_hour === undefined) errors.price_per_hour = 'required';
   if (peak_price_per_hour === undefined) errors.peak_price_per_hour = 'required';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const field = await ownerService.updatePricing(req.auth.userId, req.params.id, { price_per_hour, peak_price_per_hour });
   if (!field) return errorResponse(res, 404, 'Not found');
@@ -54,8 +56,20 @@ async function pricing(req: any, res: any) {
 
 async function schedule(req: any, res: any) {
   const days = req.body?.days;
-  if (!Array.isArray(days)) return errorResponse(res, 400, 'Validation error', { days: 'required' });
-  const field = await ownerService.updateSchedule(req.auth.userId, req.params.id, { days });
+  if (!Array.isArray(days)) return errorResponse(res, 422, 'Validation failed', { days: 'required' });
+  const mapped = days.map((d) => {
+    const dow = Number(d.day_of_week);
+    const map = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const day = Number.isInteger(dow) && dow >= 0 && dow <= 6 ? map[dow] : null;
+    return {
+      day,
+      enabled: Boolean(d.is_open),
+      open_time: d.open_time || '08:00',
+      close_time: d.close_time || '24:00'
+    };
+  });
+  if (mapped.some((m) => !m.day)) return errorResponse(res, 422, 'Validation failed', { days: 'invalid' });
+  const field = await ownerService.updateSchedule(req.auth.userId, req.params.id, { days: mapped });
   if (!field) return errorResponse(res, 404, 'Not found');
   return res.json({ success: true });
 }
@@ -68,7 +82,7 @@ async function submitForReview(req: any, res: any) {
 
 async function photos(req: any, res: any) {
   const files = req.files || [];
-  if (!Array.isArray(files) || files.length === 0) return errorResponse(res, 400, 'Validation error', { files: 'required' });
+  if (!Array.isArray(files) || files.length === 0) return errorResponse(res, 422, 'Validation failed', { files: 'required' });
   const added = await ownerService.addPhotos(req.auth.userId, req.params.id, files);
   if (!added) return errorResponse(res, 404, 'Not found');
   return res.json({ success: true, photos: added });
@@ -82,6 +96,12 @@ async function deletePhoto(req: any, res: any) {
 
 async function getField(req: any, res: any) {
   const field = await ownerService.getOwnerField(req.auth.userId, req.params.id);
+  if (!field) return errorResponse(res, 404, 'Not found');
+  return res.json({ ...field, id: field._id.toString() });
+}
+
+async function getMyField(req: any, res: any) {
+  const field = await ownerService.getMyField(req.auth.userId);
   if (!field) return errorResponse(res, 404, 'Not found');
   return res.json({ ...field, id: field._id.toString() });
 }
@@ -162,10 +182,10 @@ async function requestPayout(req: any, res: any) {
   const errors: any = {};
   if (amount === undefined) errors.amount = 'required';
   if (!validateRequiredString(method)) errors.method = 'required';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const result = await ownerService.requestPayout(req.auth.userId, { amount, method: String(method) });
-  if (!result.ok) return errorResponse(res, result.status, result.message || 'Validation error', result.errors || null);
+  if (!result.ok) return errorResponse(res, result.status, result.message || 'Validation failed', result.errors || null);
   return res.json({ success: true, payout: { id: result.payout.id, status: result.payout.status } });
 }
 
@@ -179,6 +199,7 @@ module.exports = {
   photos,
   deletePhoto,
   getField,
+  getMyField,
   listBookings,
   getBooking,
   confirmBooking,

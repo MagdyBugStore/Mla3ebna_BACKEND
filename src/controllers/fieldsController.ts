@@ -9,8 +9,10 @@ async function list(req: any, res: any) {
   const area = validateRequiredString(req.query.area) ? String(req.query.area) : null;
   const lat = toNumber(req.query.lat);
   const lng = toNumber(req.query.lng);
-  const format = validateRequiredString(req.query.format) ? String(req.query.format) : null;
+  const radius = toNumber(req.query.radius) ?? 10;
+  const sort = validateRequiredString(req.query.sort) ? String(req.query.sort) : 'distance';
   const { page, limit } = safePagination(req.query);
+  if (lat === null || lng === null) return errorResponse(res, 422, 'Validation failed', { lat: 'required', lng: 'required' });
 
   const result = await fieldsService.listFields({
     q,
@@ -19,10 +21,11 @@ async function list(req: any, res: any) {
     area,
     lat,
     lng,
+    radius,
+    sort,
     page,
     limit,
-    format,
-    currentUserId: req.auth?.userId || null
+    currentUserId: req.auth.userId
   });
   return res.json(result);
 }
@@ -41,10 +44,10 @@ async function listReviews(req: any, res: any) {
 
 async function slots(req: any, res: any) {
   const date = req.query.date;
-  if (!validateRequiredString(date)) return errorResponse(res, 400, 'Validation error', { date: 'required' });
+  if (!validateRequiredString(date)) return errorResponse(res, 422, 'Validation failed', { date: 'required' });
   const result = await fieldsService.getSlots(req.params.id, String(date));
   if (!result.ok && result.reason === 'not_found') return errorResponse(res, 404, 'Not found');
-  if (!result.ok && result.reason === 'invalid_date') return errorResponse(res, 400, 'Validation error', { date: 'invalid' });
+  if (!result.ok && result.reason === 'invalid_date') return errorResponse(res, 422, 'Validation failed', { date: 'invalid' });
   return res.json(result.data);
 }
 

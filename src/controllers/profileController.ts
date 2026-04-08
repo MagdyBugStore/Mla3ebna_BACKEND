@@ -3,17 +3,9 @@ const { errorResponse } = require('../utils/http');
 const profileService = require('../services/profileService');
 
 async function get(req: any, res: any) {
-  const user = await profileService.getProfile(req.auth.userId);
-  if (!user) return errorResponse(res, 401, 'Unauthorized');
-  return res.json({
-    id: user.id,
-    phone: user.phone,
-    role: user.role,
-    first_name: user.first_name,
-    last_name: user.last_name,
-    email: user.email,
-    avatar_url: user.avatar_url
-  });
+  const view = await profileService.getProfileView(req.auth.userId);
+  if (!view) return errorResponse(res, 401, 'Unauthorized');
+  return res.json(view);
 }
 
 async function update(req: any, res: any) {
@@ -23,7 +15,7 @@ async function update(req: any, res: any) {
   const errors: any = {};
   if (first_name !== undefined && first_name !== null && !validateRequiredString(first_name)) errors.first_name = 'invalid';
   if (last_name !== undefined && last_name !== null && !validateRequiredString(last_name)) errors.last_name = 'invalid';
-  if (Object.keys(errors).length) return errorResponse(res, 400, 'Validation error', errors);
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
   const user = await profileService.updateProfile(req.auth.userId, {
     first_name: first_name !== undefined ? String(first_name).trim() : undefined,
@@ -35,7 +27,7 @@ async function update(req: any, res: any) {
 }
 
 async function avatar(req: any, res: any) {
-  if (!req.file) return errorResponse(res, 400, 'Validation error', { file: 'required' });
+  if (!req.file) return errorResponse(res, 422, 'Validation failed', { file: 'required' });
   const url = `/uploads/${req.file.filename}`;
   const user = await profileService.updateAvatar(req.auth.userId, url);
   if (!user) return errorResponse(res, 401, 'Unauthorized');
@@ -55,7 +47,7 @@ async function notificationsReadAll(req: any, res: any) {
 
 async function fcmToken(req: any, res: any) {
   const token = req.body?.token;
-  if (!validateRequiredString(token)) return errorResponse(res, 400, 'Validation error', { token: 'required' });
+  if (!validateRequiredString(token)) return errorResponse(res, 422, 'Validation failed', { token: 'required' });
   const user = await profileService.updateFcmToken(req.auth.userId, String(token));
   if (!user) return errorResponse(res, 401, 'Unauthorized');
   return res.json({ success: true });

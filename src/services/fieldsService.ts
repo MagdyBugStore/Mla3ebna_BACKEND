@@ -14,7 +14,7 @@ async function computeFieldRatingMeta(fieldId) {
   return { average_rating: row ? Number(row.avg || 0) : 0, review_count: row ? Number(row.count || 0) : 0 };
 }
 
-async function listFields({ q, sport, city, area, lat, lng, page, limit, format, currentUserId }) {
+async function listFields({ q, sport, city, area, lat, lng, radius, sort, page, limit, currentUserId }) {
   const filter: any = { status: 'active' };
   if (q) filter.name = { $regex: q, $options: 'i' };
   if (sport) filter.sport = sport;
@@ -28,12 +28,9 @@ async function listFields({ q, sport, city, area, lat, lng, page, limit, format,
     .limit(limit)
     .lean();
 
-  let items = docs;
-  if (lat !== null && lng !== null) {
-    items = docs
-      .map((f) => ({ ...f, distance_km: haversineKm(lat, lng, f.lat, f.lng) }))
-      .sort((a, b) => a.distance_km - b.distance_km);
-  }
+  const items = docs
+    .map((f) => ({ ...f, distance_km: haversineKm(lat, lng, f.lat, f.lng) }))
+    .filter((f) => (typeof radius === 'number' ? f.distance_km <= radius : true));
 
   const favoriteSet = new Set<string>();
   if (currentUserId) {
@@ -43,7 +40,7 @@ async function listFields({ q, sport, city, area, lat, lng, page, limit, format,
 
   const data = await Promise.all(
     items.map(async (f) => {
-  const meta = await computeFieldRatingMeta(f._id.toString());
+      const meta = await computeFieldRatingMeta(f._id.toString());
       return {
         id: f._id.toString(),
         name: f.name,
@@ -60,7 +57,7 @@ async function listFields({ q, sport, city, area, lat, lng, page, limit, format,
         amenities: f.amenities || [],
         is_covered: f.is_covered,
         cover_image_url: f.cover_image_url,
-        average_rating: meta.average_rating,
+        rating: meta.average_rating,
         review_count: meta.review_count,
         is_favorite: favoriteSet.has(f._id.toString()),
         distance_km: f.distance_km ?? null
@@ -68,12 +65,11 @@ async function listFields({ q, sport, city, area, lat, lng, page, limit, format,
     })
   );
 
-  if (format === 'map') {
-    return {
-      data: data.map((x) => ({ id: x.id, name: x.name, lat: x.lat, lng: x.lng, price_per_hour: x.price_per_hour, average_rating: x.average_rating })),
-      meta: { page, limit, total }
-    };
-  }
+  const sortKey = String(sort || 'distance');
+  if (sortKey === 'rating') data.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+  else if (sortKey === 'price_asc') data.sort((a, b) => Number(a.price_per_hour || 0) - Number(b.price_per_hour || 0));
+  else if (sortKey === 'price_desc') data.sort((a, b) => Number(b.price_per_hour || 0) - Number(a.price_per_hour || 0));
+  else data.sort((a, b) => Number(a.distance_km || 0) - Number(b.distance_km || 0));
 
   return { data, meta: { page, limit, total } };
 }
@@ -111,7 +107,7 @@ async function getFieldById(fieldId, currentUserId, currentRole) {
     cover_image_url: field.cover_image_url,
     photos: field.photos || [],
     schedule: field.schedule || [],
-    average_rating: ratingMeta.average_rating,
+    rating: ratingMeta.average_rating,
     review_count: ratingMeta.review_count,
     is_favorite
   };
@@ -124,7 +120,21 @@ async function getSlots(fieldId, dateStr) {
   const bookings = await Booking.find({ field_id: fieldId, date: dateStr }).lean();
   const result = buildSlotsForDate({ ...field, id: field._id.toString() }, bookings, dateStr);
   if (!result) return { ok: false, reason: 'invalid_date' };
-  return { ok: true, data: result };
+  return {
+    ok: true,
+    data: {
+      field_id: field._id.toString(),
+      date: result.date,
+      slots: (result.slots || []).map((s) => ({
+        id: s.id,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        status: s.status,
+        is_peak: Boolean(s.is_peak),
+        price: s.is_peak ? field.peak_price_per_hour : field.price_per_hour
+      }))
+    }
+  };
 }
 
 async function listFieldReviews(fieldId, { page, limit }) {
