@@ -57,19 +57,19 @@ async function pricing(req: any, res: any) {
 async function schedule(req: any, res: any) {
   const days = req.body?.days;
   if (!Array.isArray(days)) return errorResponse(res, 422, 'Validation failed', { days: 'required' });
-  const mapped = days.map((d) => {
-    const dow = Number(d.day_of_week);
-    const map = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const day = Number.isInteger(dow) && dow >= 0 && dow <= 6 ? map[dow] : null;
+  const normalized = days.map((d) => {
+    const day_of_week = Number(d.day_of_week);
     return {
-      day,
-      enabled: Boolean(d.is_open),
+      day_of_week,
+      is_open: Boolean(d.is_open),
       open_time: d.open_time || '08:00',
       close_time: d.close_time || '24:00'
     };
   });
-  if (mapped.some((m) => !m.day)) return errorResponse(res, 422, 'Validation failed', { days: 'invalid' });
-  const field = await ownerService.updateSchedule(req.auth.userId, req.params.id, { days: mapped });
+  if (normalized.some((x) => !Number.isInteger(x.day_of_week) || x.day_of_week < 0 || x.day_of_week > 6)) {
+    return errorResponse(res, 422, 'Validation failed', { days: 'invalid' });
+  }
+  const field = await ownerService.updateSchedule(req.auth.userId, req.params.id, { days: normalized });
   if (!field) return errorResponse(res, 404, 'Not found');
   return res.json({ success: true });
 }

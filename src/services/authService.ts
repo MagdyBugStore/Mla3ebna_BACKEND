@@ -191,6 +191,7 @@ async function oauthLogin({ provider, id_token }: any) {
   if (!user && email) {
     user = await User.findOne({ email });
   }
+  const createdNewUser = !user;
   if (!user) {
     user = await User.create({
       phone: null,
@@ -227,7 +228,7 @@ async function oauthLogin({ provider, id_token }: any) {
     expires_at: new Date(Date.now() + env.refreshTokenTtlSeconds * 1000)
   });
 
-  return { ok: true, user, refresh_token };
+  return { ok: true, user, refresh_token, is_new_user: createdNewUser };
 }
 
 async function refreshAccessToken(refresh_token: string) {

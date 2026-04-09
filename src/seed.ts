@@ -67,13 +67,13 @@ async function seedIfEmpty() {
     cover_image_url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=60',
     photos: [],
     schedule: [
-      { day: 'saturday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'sunday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'monday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'tuesday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'wednesday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'thursday', enabled: true, open_time: '08:00', close_time: '24:00' },
-      { day: 'friday', enabled: false }
+      { day_of_week: 0, is_open: true, open_time: '08:00', close_time: '24:00' },
+      { day_of_week: 1, is_open: true, open_time: '08:00', close_time: '24:00' },
+      { day_of_week: 2, is_open: true, open_time: '08:00', close_time: '24:00' },
+      { day_of_week: 3, is_open: true, open_time: '08:00', close_time: '24:00' },
+      { day_of_week: 4, is_open: true, open_time: '08:00', close_time: '24:00' },
+      { day_of_week: 5, is_open: false },
+      { day_of_week: 6, is_open: true, open_time: '08:00', close_time: '24:00' }
     ]
   });
 
@@ -87,6 +87,7 @@ async function seedIfEmpty() {
 
   await Notification.create({
     user_id: player.id,
+    type: 'generic',
     title: 'مرحباً بك',
     body: 'تم إنشاء حسابك بنجاح',
     read_at: null
@@ -94,6 +95,7 @@ async function seedIfEmpty() {
 
   await Notification.create({
     user_id: owner.id,
+    type: 'generic',
     title: 'تم إضافة ملعب',
     body: 'ملعبك جاهز للتفعيل',
     read_at: null

@@ -33,7 +33,7 @@ async function social(req: any, res: any) {
       role: is_onboarded ? result.user.role : null,
       is_onboarded
     },
-    is_new_user: Boolean(result.is_new_user)
+    is_new_user: Boolean(result.is_new_user) || !is_onboarded
   });
 }
 
@@ -56,7 +56,13 @@ async function completeProfile(req: any, res: any) {
   });
   if (!user) return errorResponse(res, 401, 'Unauthorized');
 
+  // إصدار access_token جديد
+  const access_token = authService.issueAccessToken(user);
+  const expires_in = env.accessTokenTtlSeconds;
+
   return res.json({
+    access_token,
+    expires_in,
     user: {
       id: user.id,
       first_name: user.first_name,
@@ -91,4 +97,4 @@ async function fcmToken(req: any, res: any) {
 
 module.exports = { social, completeProfile, refresh, logout, fcmToken };
 
-export {};
+export { };

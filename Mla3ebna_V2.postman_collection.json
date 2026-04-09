@@ -28,21 +28,21 @@
       "name": "Auth",
       "item": [
         {
-          "name": "POST /auth/oauth (Google)",
+          "name": "POST /auth/social (Google)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"provider\": \"google\",\n  \"id_token\": \"{{google_id_token}}\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/oauth", "host": ["{{baseUrl}}"], "path": ["auth", "oauth"] }
+            "url": { "raw": "{{baseUrl}}/auth/social", "host": ["{{baseUrl}}"], "path": ["auth", "social"] }
           }
         },
         {
-          "name": "POST /auth/oauth (Apple)",
+          "name": "POST /auth/social (Apple)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"provider\": \"apple\",\n  \"id_token\": \"{{apple_id_token}}\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/oauth", "host": ["{{baseUrl}}"], "path": ["auth", "oauth"] }
+            "url": { "raw": "{{baseUrl}}/auth/social", "host": ["{{baseUrl}}"], "path": ["auth", "social"] }
           }
         },
         {
@@ -53,7 +53,7 @@
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{access_token}}" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"email\": \"test@example.com\",\n  \"role\": \"player\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"role\": \"player\"\n}" },
             "url": { "raw": "{{baseUrl}}/auth/complete-profile", "host": ["{{baseUrl}}"], "path": ["auth", "complete-profile"] }
           }
         },
@@ -77,6 +77,18 @@
             "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}" },
             "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
           }
+        },
+        {
+          "name": "PUT /auth/fcm-token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"fcm_test_token\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/fcm-token", "host": ["{{baseUrl}}"], "path": ["auth", "fcm-token"] }
+          }
         }
       ]
     },
@@ -85,22 +97,45 @@
       "item": [
         {
           "name": "GET /fields",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields", "host": ["{{baseUrl}}"], "path": ["fields"] } }
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/fields?lat=30.0&lng=31.0&radius=10&sort=distance",
+              "host": ["{{baseUrl}}"],
+              "path": ["fields"],
+              "query": [
+                { "key": "lat", "value": "30.0" },
+                { "key": "lng", "value": "31.0" },
+                { "key": "radius", "value": "10" },
+                { "key": "sort", "value": "distance" }
+              ]
+            }
+          }
         },
         {
           "name": "GET /fields/:id",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields/{{field_id}}", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}"] } }
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/fields/{{field_id}}", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}"] }
+          }
         },
         {
           "name": "GET /fields/:id/slots?date=YYYY-MM-DD",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/slots?date=2026-01-01", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "slots"], "query": [{ "key": "date", "value": "2026-01-01" }] }
           }
         },
         {
           "name": "GET /fields/:id/reviews",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/reviews", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "reviews"] } }
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/fields/{{field_id}}/reviews", "host": ["{{baseUrl}}"], "path": ["fields", "{{field_id}}", "reviews"] }
+          }
         },
         {
           "name": "GET /fields/favorites",
@@ -127,7 +162,7 @@
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{access_token}}" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"field_id\": \"{{field_id}}\",\n  \"slot_id\": \"slot_1\",\n  \"date\": \"2026-01-01\",\n  \"payment_method\": \"card\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"field_id\": \"{{field_id}}\",\n  \"date\": \"2026-01-01\",\n  \"start_time\": \"12:00\",\n  \"end_time\": \"13:00\",\n  \"payment_method\": \"card\"\n}" },
             "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
           }
         },
@@ -174,7 +209,11 @@
       "item": [
         {
           "name": "GET /payments/methods",
-          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/payments/methods", "host": ["{{baseUrl}}"], "path": ["payments", "methods"] } }
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/payments/methods", "host": ["{{baseUrl}}"], "path": ["payments", "methods"] }
+          }
         },
         {
           "name": "POST /payments/initiate",
@@ -272,8 +311,16 @@
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{access_token}}" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Field\",\n  \"phone\": \"+201000000000\",\n  \"city\": \"Cairo\",\n  \"address\": \"Test address\",\n  \"lat\": 30.0,\n  \"lng\": 31.0\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Field\",\n  \"phone\": \"+201000000000\",\n  \"city\": \"Cairo\",\n  \"area\": \"Nasr City\",\n  \"address\": \"Test address\",\n  \"lat\": 30.0,\n  \"lng\": 31.0\n}" },
             "url": { "raw": "{{baseUrl}}/owner/fields", "host": ["{{baseUrl}}"], "path": ["owner", "fields"] }
+          }
+        },
+        {
+          "name": "GET /owner/fields/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/owner/fields/me", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "me"] }
           }
         },
         {
@@ -296,14 +343,14 @@
               { "key": "Content-Type", "value": "application/json" },
               { "key": "Authorization", "value": "Bearer {{access_token}}" }
             ],
-            "body": { "mode": "raw", "raw": "{\n  \"sport\": \"football\",\n  \"surface\": \"artificial_grass\",\n  \"size\": \"5v5\",\n  \"amenities\": [\"parking\"]\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"sport\": \"football\",\n  \"surface\": \"artificial_grass\",\n  \"size\": \"5v5\",\n  \"is_covered\": true,\n  \"amenities\": [\"parking\"]\n}" },
             "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/specs", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "specs"] }
           }
         },
         {
-          "name": "PUT /owner/fields/:id/photos (multipart)",
+          "name": "POST /owner/fields/:id/photos (multipart)",
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "body": { "mode": "formdata", "formdata": [{ "key": "files", "type": "file", "src": "" }] },
             "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/photos", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "photos"] }
@@ -339,7 +386,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"days\": [\n    {\"day\":\"saturday\",\"enabled\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"}\n  ]\n}"
+              "raw": "{\n  \"days\": [\n    {\"day_of_week\":0,\"is_open\":false},\n    {\"day_of_week\":1,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"},\n    {\"day_of_week\":2,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"},\n    {\"day_of_week\":3,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"},\n    {\"day_of_week\":4,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"},\n    {\"day_of_week\":5,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"},\n    {\"day_of_week\":6,\"is_open\":true,\"open_time\":\"08:00\",\"close_time\":\"24:00\"}\n  ]\n}"
             },
             "url": { "raw": "{{baseUrl}}/owner/fields/{{field_id}}/schedule", "host": ["{{baseUrl}}"], "path": ["owner", "fields", "{{field_id}}", "schedule"] }
           }
@@ -377,11 +424,11 @@
           }
         },
         {
-          "name": "PUT /owner/bookings/:id/confirm",
+          "name": "PUT /owner/bookings/:id/confirm-attendance",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
-            "url": { "raw": "{{baseUrl}}/owner/bookings/{{booking_id}}/confirm", "host": ["{{baseUrl}}"], "path": ["owner", "bookings", "{{booking_id}}", "confirm"] }
+            "url": { "raw": "{{baseUrl}}/owner/bookings/{{booking_id}}/confirm-attendance", "host": ["{{baseUrl}}"], "path": ["owner", "bookings", "{{booking_id}}", "confirm-attendance"] }
           }
         },
         {

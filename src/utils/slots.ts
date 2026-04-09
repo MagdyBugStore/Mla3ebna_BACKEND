@@ -46,10 +46,20 @@ function isPeakTime(startMinutes: number) {
 function buildSlotsForDate(field: any, bookings: any[], dateStr: string) {
   const date = new Date(`${dateStr}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return null;
-  const dayName = normalizeDayName(date.getUTCDay());
+  const dayOfWeek = date.getUTCDay();
+  const dayName = normalizeDayName(dayOfWeek);
   const schedule = Array.isArray(field.schedule) ? field.schedule : [];
-  const dayCfg = schedule.find((d: any) => d.day === dayName) || null;
-  if (!dayCfg || dayCfg.enabled === false) {
+  const dayCfg =
+    schedule.find((d: any) => Number(d.day_of_week) === dayOfWeek) ||
+    schedule.find((d: any) => d.day === dayName) ||
+    null;
+  const isOpen =
+    dayCfg && typeof dayCfg.is_open === 'boolean'
+      ? dayCfg.is_open
+      : dayCfg && typeof dayCfg.enabled === 'boolean'
+        ? dayCfg.enabled
+        : false;
+  if (!dayCfg || isOpen === false) {
     return { date: dateStr, slots: [] };
   }
 

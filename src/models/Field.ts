@@ -2,8 +2,10 @@ const mongoose = require('mongoose');
 
 const ScheduleDaySchema = new mongoose.Schema(
   {
-    day: { type: String, required: true },
-    enabled: { type: Boolean, default: true },
+    day_of_week: { type: Number, default: null },
+    is_open: { type: Boolean, default: null },
+    day: { type: String, default: null },
+    enabled: { type: Boolean, default: null },
     open_time: { type: String, default: '08:00' },
     close_time: { type: String, default: '24:00' }
   },

@@ -65,12 +65,13 @@ async function updateField(ownerId, fieldId, patch) {
   return field;
 }
 
-async function updateSpecs(ownerId, fieldId, { sport, surface, size, amenities }) {
+async function updateSpecs(ownerId, fieldId, { sport, surface, size, is_covered, amenities }) {
   const field = await Field.findOne({ _id: fieldId, owner_id: ownerId });
   if (!field) return null;
   field.sport = sport ?? field.sport;
   field.surface = surface ?? field.surface;
   field.size = size ?? field.size;
+  if (is_covered !== undefined) field.is_covered = Boolean(is_covered);
   if (Array.isArray(amenities)) field.amenities = amenities;
   await field.save();
   return field;
