@@ -3,7 +3,7 @@ import os
 # 1. Configuration
 # For Node projects, we usually want the 'src' folder and specific root files
 project_root = './'  # Start at root to catch config files
-output_file = 'node_ts_collection.txt'
+output_file = 'node_ts_code.txt'
 
 # 2. Extensions to capture
 valid_extensions = ('.ts', '.js', '.json', '.mjs', '.env.example')
