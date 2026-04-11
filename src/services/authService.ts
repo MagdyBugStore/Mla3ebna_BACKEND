@@ -247,12 +247,72 @@ async function logout(userId: string, refresh_token: string) {
   return { success: true };
 }
 
+async function simpleGoogleAuth(userData: {
+  email: string;
+  display_name?: string;
+  google_id: string;
+  photo_url?: string;
+}) {
+  const { email, display_name, google_id, photo_url } = userData;
+
+  // البحث عن مستخدم بنفس google_id أو email
+  let user = await User.findOne({
+    $or: [
+      { google_id: google_id },
+      { email: email }
+    ]
+  });
+
+  if (!user) {
+    // تقسيم الاسم إلى first_name و last_name
+    const nameParts = (display_name || '').split(' ');
+    const first_name = nameParts[0] || null;
+    const last_name = nameParts.slice(1).join(' ') || null;
+
+    // إنشاء مستخدم جديد
+    user = await User.create({
+      email,
+      first_name,
+      last_name,
+      avatar_url: photo_url || null,
+      google_id,
+      role: 'player',
+      profile_completed_at: null,
+    });
+  } else {
+    // تحديث google_id إذا لم يكن موجوداً
+    if (!user.google_id) {
+      user.google_id = google_id;
+      await user.save();
+    }
+  }
+
+  // إنشاء refresh_token
+  const refresh_token = randomToken();
+  await RefreshToken.create({
+    token: refresh_token,
+    user_id: user.id,
+    revoked_at: null,
+    expires_at: new Date(Date.now() + env.refreshTokenTtlSeconds * 1000),
+  });
+
+  const is_new_user = !user.profile_completed_at;
+
+  return {
+    ok: true,
+    user,
+    refresh_token,
+    is_new_user,
+  };
+}
+
 module.exports = {
   issueAccessToken,
   oauthLogin,
   completeProfile,
+  simpleGoogleAuth,
   refreshAccessToken,
   logout
 };
 
-export {};
+export { };

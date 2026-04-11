@@ -25,3 +25,5 @@ ref
 *.njsproj
 *.sln
 *.sw?
+uploads
+.env

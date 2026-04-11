@@ -18,6 +18,7 @@ function buildV1Router() {
   v1.post('/auth/refresh', authController.refresh);
   v1.post('/auth/logout', requireAuth, authController.logout);
   v1.put('/auth/fcm-token', requireAuth, authController.fcmToken);
+  v1.post('/auth/simple-google', authController.simpleGoogle);
 
   v1.get('/fields', requireAuth, fieldsController.list);
   v1.get('/fields/favorites', requireAuth, fieldsController.favoritesList);
@@ -88,4 +89,4 @@ function buildV1Router() {
 
 module.exports = { buildV1Router };
 
-export {};
+export { };

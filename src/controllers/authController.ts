@@ -95,6 +95,43 @@ async function fcmToken(req: any, res: any) {
   return res.json({ success: true });
 }
 
-module.exports = { social, completeProfile, refresh, logout, fcmToken };
+async function simpleGoogle(req: any, res: any) {
+  const { email, display_name, google_id, photo_url } = req.body;
+
+  // تحقق بسيط من وجود الحقول المطلوبة
+  if (!email || !google_id) {
+    return errorResponse(res, 400, 'Missing required fields');
+  }
+
+  const result = await authService.simpleGoogleAuth({
+    email,
+    display_name,
+    google_id,
+    photo_url,
+  });
+
+  if (!result.ok) {
+    return errorResponse(res, 400, 'Authentication failed');
+  }
+
+  const access_token = authService.issueAccessToken(result.user);
+  const is_onboarded = Boolean(result.user.profile_completed_at);
+
+  return res.json({
+    access_token,
+    refresh_token: result.refresh_token,
+    expires_in: env.accessTokenTtlSeconds,
+    user: {
+      id: result.user.id,
+      email: result.user.email,
+      display_name: [result.user.first_name, result.user.last_name].filter(Boolean).join(' '),
+      avatar_url: result.user.avatar_url,
+      role: is_onboarded ? result.user.role : null,
+      is_onboarded,
+    },
+    is_new_user: !is_onboarded,
+  });
+}
+module.exports = { social, completeProfile, refresh, logout, fcmToken, simpleGoogle };
 
 export { };

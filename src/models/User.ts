@@ -5,6 +5,7 @@ const FcmTokenSchema = new mongoose.Schema(
     token: { type: String, required: true },
     platform: { type: String, default: null },
     created_at: { type: Date, default: Date.now },
+    google_id: { type: String, default: null, index: true, sparse: true },
     last_seen_at: { type: Date, default: null }
   },
   { _id: false }
@@ -38,4 +39,4 @@ UserSchema.set('toJSON', {
 
 module.exports = mongoose.model('User', UserSchema);
 
-export {};
+export { };
