@@ -78,7 +78,6 @@ const FieldSchema = new mongoose.Schema(
     surface: { type: String, default: null },
     size: { type: String, default: null },
     price_per_hour: { type: Number, default: 0 },
-    peak_price_per_hour: { type: Number, default: 0 },
     pricing_rules: { type: [PricingRuleSchema], default: [] },
     amenities: { type: [String], default: [] },
     is_covered: { type: Boolean, default: false },

@@ -255,7 +255,7 @@ async function simpleGoogleAuth(userData: {
 }) {
   const { email, display_name, google_id, photo_url } = userData;
 
-  // البحث عن مستخدم بنفس google_id أو email
+  // البحث عن مستخدم بنفس google_id أو نفس البريد الإلكتروني
   let user = await User.findOne({
     $or: [
       { google_id: google_id },
@@ -264,12 +264,11 @@ async function simpleGoogleAuth(userData: {
   });
 
   if (!user) {
-    // تقسيم الاسم إلى first_name و last_name
+    // لم يتم العثور على مستخدم → إنشاء جديد
     const nameParts = (display_name || '').split(' ');
     const first_name = nameParts[0] || null;
     const last_name = nameParts.slice(1).join(' ') || null;
 
-    // إنشاء مستخدم جديد
     user = await User.create({
       email,
       first_name,
@@ -280,14 +279,40 @@ async function simpleGoogleAuth(userData: {
       profile_completed_at: null,
     });
   } else {
-    // تحديث google_id إذا لم يكن موجوداً
+    // تم العثور على مستخدم → قم بربط google_id إذا لم يكن موجوداً
+    let isUpdated = false;
+
     if (!user.google_id) {
       user.google_id = google_id;
+      isUpdated = true;
+    }
+
+    // تحديث الاسم إذا كان فارغاً
+    if ((!user.first_name || !user.last_name) && display_name) {
+      const nameParts = display_name.split(' ');
+      if (!user.first_name) user.first_name = nameParts[0] || null;
+      if (!user.last_name) user.last_name = nameParts.slice(1).join(' ') || null;
+      isUpdated = true;
+    }
+
+    // تحديث الصورة إذا كانت فارغة
+    if (!user.avatar_url && photo_url) {
+      user.avatar_url = photo_url;
+      isUpdated = true;
+    }
+
+    // تحديث البريد الإلكتروني إذا كان فارغاً (نادر)
+    if (!user.email && email) {
+      user.email = email;
+      isUpdated = true;
+    }
+
+    if (isUpdated) {
       await user.save();
     }
   }
 
-  // إنشاء refresh_token
+  // إنشاء refresh_token جديد
   const refresh_token = randomToken();
   await RefreshToken.create({
     token: refresh_token,

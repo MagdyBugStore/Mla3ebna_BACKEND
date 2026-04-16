@@ -80,6 +80,11 @@ function requestLogger(req, res, next) {
     }
 
     console.log(JSON.stringify({ ...base, ...extras }));
+    // src/app.ts - داخل دالة requestLogger، بعد سطر 82
+    if (env.logRequestBody && req.body !== undefined) {
+      extras.body = safeSerialize(req.body);
+      console.log(`[BODY] ${JSON.stringify(safeSerialize(req.body))}`); // ← طباعة إضافية
+    }
   });
 
   return next();
@@ -87,9 +92,32 @@ function requestLogger(req, res, next) {
 
 function createApp() {
   const app = express();
+
+  app.use((req, res, next) => {
+    console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
+    console.log(`📦 Body:`, req.body);
+    console.log(`🔑 Headers:`, req.headers);
+    next();
+  });
   app.use(cors({ origin: env.corsOrigin === '*' ? true : env.corsOrigin }));
   app.use(express.json({ limit: '2mb' }));
   app.use('/uploads', express.static(uploadsDir));
+
+  app.use((req, res, next) => {
+    console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
+    console.log(`📦 Body:`, req.body);       // الآن سيكون موجوداً
+    console.log(`🔑 Headers:`, req.headers);
+
+    // للاستجابة: نضغط على res.json
+    const originalJson = res.json;
+    res.json = function (body) {
+      console.log(`📬 Response (${res.statusCode}):`, body);
+      return originalJson.call(this, body);
+    };
+
+    next();
+  });
+  
   if (env.logRequests) app.use(requestLogger);
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -100,4 +128,4 @@ function createApp() {
 
 module.exports = { createApp };
 
-export {};
+export { };

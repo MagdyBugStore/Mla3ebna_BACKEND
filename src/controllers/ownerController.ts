@@ -43,13 +43,12 @@ async function specs(req: any, res: any) {
 }
 
 async function pricing(req: any, res: any) {
-  const { price_per_hour, peak_price_per_hour } = req.body || {};
+  const { price_per_hour } = req.body || {};
   const errors: any = {};
   if (price_per_hour === undefined) errors.price_per_hour = 'required';
-  if (peak_price_per_hour === undefined) errors.peak_price_per_hour = 'required';
   if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
 
-  const field = await ownerService.updatePricing(req.auth.userId, req.params.id, { price_per_hour, peak_price_per_hour });
+  const field = await ownerService.updatePricing(req.auth.userId, req.params.id, { price_per_hour  });
   if (!field) return errorResponse(res, 404, 'Not found');
   return res.json({ success: true });
 }

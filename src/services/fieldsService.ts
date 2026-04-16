@@ -130,8 +130,7 @@ async function getSlots(fieldId, dateStr) {
         start_time: s.start_time,
         end_time: s.end_time,
         status: s.status,
-        is_peak: Boolean(s.is_peak),
-        price: s.is_peak ? field.peak_price_per_hour : field.price_per_hour
+        price: field.price_per_hour
       }))
     }
   };
@@ -201,4 +200,4 @@ async function removeFavorite(userId, fieldId) {
 
 module.exports = { listFields, getFieldById, getSlots, listFieldReviews, listFavorites, addFavorite, removeFavorite };
 
-export {};
+export { };

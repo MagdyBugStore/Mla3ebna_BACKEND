@@ -81,7 +81,6 @@ async function updatePricing(ownerId, fieldId, { price_per_hour, peak_price_per_
   const field = await Field.findOne({ _id: fieldId, owner_id: ownerId });
   if (!field) return null;
   field.price_per_hour = Number(price_per_hour || 0);
-  field.peak_price_per_hour = Number(peak_price_per_hour || 0);
   await field.save();
   return field;
 }

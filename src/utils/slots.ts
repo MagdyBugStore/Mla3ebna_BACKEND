@@ -85,9 +85,8 @@ function buildSlotsForDate(field: any, bookings: any[], dateStr: string) {
     let status = bookedSet.has(key) ? 'booked' : 'available';
     const localStart = new Date(`${dateStr}T${start_time}:00`);
     if (localStart.getTime() < now.getTime() && status === 'available') status = 'disabled';
-    const is_peak = isPeakTime(t);
     const id = `slot_${field.id}_${dateStr}_${start_time.replace(':', '')}`;
-    slots.push({ id, start_time, end_time, status, is_peak });
+    slots.push({ id, start_time, end_time, status });
   }
 
   return { date: dateStr, slots };

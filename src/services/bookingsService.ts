@@ -40,9 +40,7 @@ async function createBooking(userId, { field_id, date, start_time, end_time, pay
   if (!slot) return { ok: false, status: 422, errors: { start_time: 'invalid', end_time: 'invalid' } };
   if (slot.status !== 'available') return { ok: false, status: 409, message: 'Slot already booked' };
 
-  const startMinutes = Number(slot.start_time.slice(0, 2)) * 60 + Number(slot.start_time.slice(3, 5));
-  const total_price = isPeakTime(startMinutes) ? field.peak_price_per_hour : field.price_per_hour;
-
+  const total_price = field.price_per_hour;
   let booking;
   try {
     booking = await Booking.create({
@@ -131,14 +129,14 @@ async function getMyBookingById(userId, bookingId) {
     review_id: booking.review_id || null,
     field: field
       ? {
-          id: field._id.toString(),
-          name: field.name,
-          address: field.address,
-          phone: field.phone,
-          city: field.city,
-          area: field.area,
-          cover_image_url: field.cover_image_url
-        }
+        id: field._id.toString(),
+        name: field.name,
+        address: field.address,
+        phone: field.phone,
+        city: field.city,
+        area: field.area,
+        cover_image_url: field.cover_image_url
+      }
       : null
   };
 }
@@ -246,4 +244,4 @@ async function submitReview(userId, bookingId, { rating, comment }) {
 
 module.exports = { createBooking, listMyBookings, getMyBookingById, cancelMyBooking, submitReview };
 
-export {};
+export { };

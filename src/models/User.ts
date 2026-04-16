@@ -13,7 +13,7 @@ const FcmTokenSchema = new mongoose.Schema(
 
 const UserSchema = new mongoose.Schema(
   {
-    phone: { type: String, default: null, unique: true, sparse: true, index: true },
+    phone: { type: String, default: null, sparse: true, index: true },
     role: { type: String, enum: ['player', 'owner', 'admin'], default: 'player', index: true },
     first_name: { type: String, default: null },
     last_name: { type: String, default: null },
@@ -23,6 +23,7 @@ const UserSchema = new mongoose.Schema(
     fcm_token: { type: String, default: null },
     fcm_tokens: { type: [FcmTokenSchema], default: [] },
     profile_completed_at: { type: Date, default: null },
+    google_id: { type: String, default: null, index: true, sparse: true },
     default_city: { type: String, default: null }
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }

@@ -14,8 +14,8 @@ const env = {
   appleClientId: process.env.APPLE_CLIENT_ID || null,
   corsOrigin: process.env.CORS_ORIGIN || '*',
   logRequests: String(process.env.LOG_REQUESTS ?? 'true').toLowerCase() === 'true',
-  logRequestBody: String(process.env.LOG_REQUEST_BODY ?? 'false').toLowerCase() === 'true',
-  logResponseBody: String(process.env.LOG_RESPONSE_BODY ?? 'false').toLowerCase() === 'true'
+  logRequestBody: String(process.env.LOG_REQUEST_BODY ?? 'true').toLowerCase() === 'true',  
+  logResponseBody: String(process.env.LOG_RESPONSE_BODY ?? 'true').toLowerCase() === 'true' 
 };
 
 module.exports = { env };
