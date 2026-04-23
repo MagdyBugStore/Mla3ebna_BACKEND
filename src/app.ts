@@ -3,6 +3,7 @@ const express = require('express');
 const { env } = require('./config/env');
 const { buildV1Router } = require('./routes/v1');
 const { uploadsDir } = require('./config/upload');
+const path = require('path');
 
 function safeSerialize(value) {
   const maxString = 200;
@@ -93,33 +94,33 @@ function requestLogger(req, res, next) {
 function createApp() {
   const app = express();
 
-  app.use((req, res, next) => {
-    console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
-    console.log(`📦 Body:`, req.body);
-    console.log(`🔑 Headers:`, req.headers);
-    next();
-  });
-  app.use(cors({ origin: env.corsOrigin === '*' ? true : env.corsOrigin }));
+  // 1. الـ Parsers لازم تكون في الأول عشان الـ Log يشوف البيانات
   app.use(express.json({ limit: '2mb' }));
-  app.use('/uploads', express.static(uploadsDir));
+  app.use(express.urlencoded({ extended: true })); // مهم لو بتبعت بيانات من Form
+  app.use(cors({ origin: env.corsOrigin === '*' ? true : env.corsOrigin }));
 
+  // 2. تعريف الـ Static Files (تأكد أن uploadsDir مساره صحيح ومطلق)
+  // الحل الأضمن للمسار:
+  const finalUploadsDir = uploadsDir || path.join(process.cwd(), 'uploads');
+  app.use('/uploads', express.static(finalUploadsDir));
+
+  // 3. الـ Logging Middleware
+  if (env.logRequests) {
+    app.use(requestLogger);
+  }
+
+  // الـ Custom Log بتاعك (بعد الـ json parser عشان الـ Body يظهر)
   app.use((req, res, next) => {
-    console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
-    console.log(`📦 Body:`, req.body);       // الآن سيكون موجوداً
-    console.log(`🔑 Headers:`, req.headers);
-
-    // للاستجابة: نضغط على res.json
-    const originalJson = res.json;
-    res.json = function (body) {
-      console.log(`📬 Response (${res.statusCode}):`, body);
-      return originalJson.call(this, body);
-    };
-
+    if (env.logRequests) {
+      console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
+      if (req.body && Object.keys(req.body).length > 0) {
+         console.log(`📦 Body:`, safeSerialize(req.body));
+      }
+    }
     next();
   });
-  
-  if (env.logRequests) app.use(requestLogger);
 
+  // 4. الـ Routes
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.use('/v1', buildV1Router());
 
