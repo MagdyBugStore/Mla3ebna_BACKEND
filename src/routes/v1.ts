@@ -20,11 +20,15 @@ function buildV1Router() {
   v1.put('/auth/fcm-token', requireAuth, authController.fcmToken);
   v1.post('/auth/simple-google', authController.simpleGoogle);
 
-  v1.get('/fields', requireAuth, fieldsController.list);
+  // Public browse endpoints — token optional (guests can read, auth enriches with favorites)
+  v1.get('/fields', optionalAuth, fieldsController.list);
+  // /fields/favorites must come BEFORE /fields/:id so Express matches it as a literal, not a param
   v1.get('/fields/favorites', requireAuth, fieldsController.favoritesList);
-  v1.get('/fields/:id', requireAuth, fieldsController.getById);
-  v1.get('/fields/:id/reviews', requireAuth, fieldsController.listReviews);
-  v1.get('/fields/:id/slots', requireAuth, fieldsController.slots);
+  v1.get('/fields/:id', optionalAuth, fieldsController.getById);
+  v1.get('/fields/:id/reviews', optionalAuth, fieldsController.listReviews);
+  v1.get('/fields/:id/slots', optionalAuth, fieldsController.slots);
+
+  // Auth-required field actions
   v1.post('/fields/:id/favorites', requireAuth, fieldsController.favoritesAdd);
   v1.delete('/fields/:id/favorites', requireAuth, fieldsController.favoritesRemove);
 

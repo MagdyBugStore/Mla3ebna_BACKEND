@@ -25,7 +25,7 @@ async function list(req: any, res: any) {
     sort,
     page,
     limit,
-    currentUserId: req.auth.userId
+    currentUserId: req.auth?.userId ?? null
   });
   return res.json(result);
 }
