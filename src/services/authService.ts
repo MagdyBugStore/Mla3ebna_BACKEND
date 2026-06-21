@@ -8,6 +8,23 @@ const Otp = require('../models/Otp');
 const RefreshToken = require('../models/RefreshToken');
 const { randomToken } = require('../utils/ids');
 
+const { scryptSync, randomBytes, timingSafeEqual } = crypto;
+
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  const derived = scryptSync(password, salt, 64);
+  const hashBuf = Buffer.from(hash, 'hex');
+  if (derived.length !== hashBuf.length) return false;
+  return timingSafeEqual(derived, hashBuf);
+}
+
 const jwksCache = new Map();
 
 function base64UrlToBuffer(str: any) {
@@ -331,13 +348,62 @@ async function simpleGoogleAuth(userData: {
   };
 }
 
+async function registerWithEmail({ first_name, last_name, email, password }: any) {
+  const existing = await User.findOne({ email: email.toLowerCase() });
+  if (existing) return { ok: false, status: 409, message: 'Email already in use', errors: { email: 'already_exists' } };
+
+  const password_hash = hashPassword(password);
+  const user = await User.create({
+    email: email.toLowerCase(),
+    first_name: first_name.trim(),
+    last_name: last_name.trim(),
+    password_hash,
+    role: 'player',
+    phone: null,
+    avatar_url: null,
+    favorites: [],
+    fcm_token: null,
+    fcm_tokens: [],
+    profile_completed_at: new Date(),
+    default_city: null
+  });
+
+  const refresh_token = randomToken();
+  await RefreshToken.create({
+    token: refresh_token,
+    user_id: user.id,
+    revoked_at: null,
+    expires_at: new Date(Date.now() + env.refreshTokenTtlSeconds * 1000)
+  });
+
+  return { ok: true, user, refresh_token, is_new_user: true };
+}
+
+async function loginWithEmail({ email, password }: any) {
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user || !user.password_hash) return { ok: false, status: 401, message: 'Invalid credentials' };
+  if (!verifyPassword(password, user.password_hash)) return { ok: false, status: 401, message: 'Invalid credentials' };
+
+  const refresh_token = randomToken();
+  await RefreshToken.create({
+    token: refresh_token,
+    user_id: user.id,
+    revoked_at: null,
+    expires_at: new Date(Date.now() + env.refreshTokenTtlSeconds * 1000)
+  });
+
+  return { ok: true, user, refresh_token, is_new_user: false };
+}
+
 module.exports = {
   issueAccessToken,
   oauthLogin,
   completeProfile,
   simpleGoogleAuth,
   refreshAccessToken,
-  logout
+  logout,
+  registerWithEmail,
+  loginWithEmail
 };
 
 export { };

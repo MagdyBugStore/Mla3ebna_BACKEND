@@ -12,6 +12,8 @@ const { upload } = require('../config/upload');
 function buildV1Router() {
   const v1 = express.Router();
 
+  v1.post('/auth/register', authController.register);
+  v1.post('/auth/login', authController.login);
   v1.post('/auth/social', authController.social);
   v1.post('/auth/oauth', authController.social);
   v1.post('/auth/complete-profile', requireAuth, authController.completeProfile);

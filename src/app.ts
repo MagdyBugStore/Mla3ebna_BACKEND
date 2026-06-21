@@ -5,36 +5,49 @@ const { buildV1Router } = require('./routes/v1');
 const { uploadsDir } = require('./config/upload');
 const path = require('path');
 
-function safeSerialize(value) {
-  const maxString = 200;
-  const maxKeys = 40;
-  const maxArray = 20;
-  const maxDepth = 4;
-  const redactedKey = /token|authorization|password|secret|card|otp/i;
 
-  function walk(v, depth) {
-    if (v === null || v === undefined) return v;
-    if (typeof v === 'string') return v.length > maxString ? `${v.slice(0, maxString)}…` : v;
-    if (typeof v === 'number' || typeof v === 'boolean') return v;
-    if (v instanceof Date) return v.toISOString();
-    if (Array.isArray(v)) {
-      if (depth >= maxDepth) return `[Array(${v.length})]`;
-      return v.slice(0, maxArray).map((x) => walk(x, depth + 1));
-    }
-    if (typeof v === 'object') {
-      if (depth >= maxDepth) return '[Object]';
-      const out = {};
-      const keys = Object.keys(v).slice(0, maxKeys);
-      for (const k of keys) {
-        if (redactedKey.test(k)) out[k] = '[REDACTED]';
-        else out[k] = walk(v[k], depth + 1);
-      }
-      return out;
-    }
-    return String(v);
+const RESET = '\x1b[0m';
+const DIM   = '\x1b[2m';
+const BOLD  = '\x1b[1m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const RED   = '\x1b[31m';
+const CYAN  = '\x1b[36m';
+const GRAY  = '\x1b[90m';
+
+function colorStatus(s: number) {
+  if (s < 300) return `${GREEN}${s}${RESET}`;
+  if (s < 400) return `${CYAN}${s}${RESET}`;
+  if (s < 500) return `${YELLOW}${s}${RESET}`;
+  return `${RED}${s}${RESET}`;
+}
+
+function colorMethod(m: string) {
+  const c = m === 'GET' ? CYAN : m === 'POST' ? GREEN : m === 'PUT' ? YELLOW : m === 'DELETE' ? RED : RESET;
+  return `${c}${BOLD}${m.padEnd(6)}${RESET}`;
+}
+
+function shortPath(url: string) {
+  const [path, qs] = url.split('?');
+  if (!qs) return path;
+  const params = new URLSearchParams(qs);
+  const keys = [...params.keys()];
+  return keys.length ? `${path}  ${GRAY}?${keys.join('&')}${RESET}` : path;
+}
+
+function summarizeResponse(body: any): string {
+  if (body === null || body === undefined) return 'null';
+  if (typeof body !== 'object') return String(body).slice(0, 80);
+  if (Array.isArray(body)) return `[${body.length} items]`;
+
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(body)) {
+    if (Array.isArray(v)) parts.push(`${k}:[${(v as any[]).length}]`);
+    else if (v && typeof v === 'object') parts.push(`${k}:{${Object.keys(v).join(',').slice(0, 40)}}`);
+    else if (typeof v === 'string') parts.push(`${k}:"${(v as string).slice(0, 30)}"`);
+    else parts.push(`${k}:${v}`);
   }
-
-  return walk(value, 0);
+  return `{${parts.join(', ')}}`;
 }
 
 function requestLogger(req, res, next) {
@@ -44,48 +57,35 @@ function requestLogger(req, res, next) {
   let responseBody: any = undefined;
 
   const origJson = res.json.bind(res);
-  res.json = (body) => {
-    responseBody = body;
-    return origJson(body);
-  };
-  const origSend = res.send.bind(res);
-  res.send = (body) => {
-    responseBody = body;
-    return origSend(body);
-  };
+  res.json = (body) => { responseBody = body; return origJson(body); };
 
   res.on('finish', () => {
-    const end = process.hrtime.bigint();
-    const durationMs = Number(end - start) / 1e6;
+    const ms = Math.round(Number(process.hrtime.bigint() - start) / 1e5) / 10;
     const auth = req.auth || null;
-    const base = {
-      reqId,
-      method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      duration_ms: Math.round(durationMs * 10) / 10,
-      user_id: auth?.userId || null,
-      role: auth?.role || null
-    };
+    const uid = auth?.userId ? `${DIM}uid:${String(auth.userId).slice(-8)}${RESET}` : `${GRAY}uid:-${RESET}`;
+    const msStr = ms > 500 ? `${YELLOW}${ms}ms${RESET}` : `${DIM}${ms}ms${RESET}`;
 
-    const extras: any = {
-      ip: req.ip || null,
-      ua: req.headers['user-agent'] || null,
-      query: safeSerialize(req.query || {})
-    };
-    if (env.logRequestBody && req.body !== undefined) {
-      extras.body = safeSerialize(req.body);
-    }
-    if (env.logResponseBody && responseBody !== undefined) {
-      extras.response = safeSerialize(responseBody);
+    // Body keys summary (POST/PUT only, skip empty)
+    const body = req.body;
+    const bodyKeys = body && typeof body === 'object' ? Object.keys(body).filter((k) => body[k] !== undefined) : [];
+    const bodyStr = bodyKeys.length ? `  ${GRAY}body:{${bodyKeys.join(',')}}${RESET}` : '';
+
+    // Response summary
+    let respStr = '';
+    if (responseBody !== undefined) {
+      if (res.statusCode >= 400) {
+        const msg = typeof responseBody === 'object'
+          ? responseBody.message || responseBody.error
+          : String(responseBody).slice(0, 80);
+        if (msg) respStr = `  ${RED}← ${msg}${RESET}`;
+      } else {
+        respStr = `  ${GRAY}← ${summarizeResponse(responseBody)}${RESET}`;
+      }
     }
 
-    console.log(JSON.stringify({ ...base, ...extras }));
-    // src/app.ts - داخل دالة requestLogger، بعد سطر 82
-    if (env.logRequestBody && req.body !== undefined) {
-      extras.body = safeSerialize(req.body);
-      console.log(`[BODY] ${JSON.stringify(safeSerialize(req.body))}`); // ← طباعة إضافية
-    }
+    console.log(
+      `${colorMethod(req.method)} ${shortPath(req.originalUrl)}  ${colorStatus(res.statusCode)}  ${msStr}  ${uid}${bodyStr}${respStr}`
+    );
   });
 
   return next();
@@ -108,17 +108,6 @@ function createApp() {
   if (env.logRequests) {
     app.use(requestLogger);
   }
-
-  // الـ Custom Log بتاعك (بعد الـ json parser عشان الـ Body يظهر)
-  app.use((req, res, next) => {
-    if (env.logRequests) {
-      console.log(`\n📨 [${req.method}] ${req.originalUrl}`);
-      if (req.body && Object.keys(req.body).length > 0) {
-         console.log(`📦 Body:`, safeSerialize(req.body));
-      }
-    }
-    next();
-  });
 
   // 4. الـ Routes
   app.get('/health', (_req, res) => res.json({ ok: true }));

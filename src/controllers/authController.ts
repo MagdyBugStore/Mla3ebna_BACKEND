@@ -132,6 +132,73 @@ async function simpleGoogle(req: any, res: any) {
     is_new_user: !is_onboarded,
   });
 }
-module.exports = { social, completeProfile, refresh, logout, fcmToken, simpleGoogle };
+async function register(req: any, res: any) {
+  const { first_name, last_name, email, password } = req.body;
+  const errors: any = {};
+  if (!validateRequiredString(first_name)) errors.first_name = 'required';
+  if (!validateRequiredString(last_name)) errors.last_name = 'required';
+  if (!validateRequiredString(email)) errors.email = 'required';
+  if (!validateRequiredString(password)) errors.password = 'required';
+  if (password && String(password).length < 6) errors.password = 'min_length_6';
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
+
+  const result = await authService.registerWithEmail({
+    first_name: String(first_name),
+    last_name: String(last_name),
+    email: String(email),
+    password: String(password)
+  });
+
+  if (!result.ok) {
+    if (result.errors) return errorResponse(res, result.status, result.message || 'Registration failed', result.errors);
+    return errorResponse(res, result.status || 400, result.message || 'Registration failed');
+  }
+
+  const access_token = authService.issueAccessToken(result.user);
+  return res.status(201).json({
+    access_token,
+    refresh_token: result.refresh_token,
+    expires_in: env.accessTokenTtlSeconds,
+    user: {
+      id: result.user.id,
+      email: result.user.email,
+      display_name: [result.user.first_name, result.user.last_name].filter(Boolean).join(' '),
+      avatar_url: result.user.avatar_url,
+      role: result.user.role,
+      is_onboarded: true
+    },
+    is_new_user: true
+  });
+}
+
+async function login(req: any, res: any) {
+  const { email, password } = req.body;
+  const errors: any = {};
+  if (!validateRequiredString(email)) errors.email = 'required';
+  if (!validateRequiredString(password)) errors.password = 'required';
+  if (Object.keys(errors).length) return errorResponse(res, 422, 'Validation failed', errors);
+
+  const result = await authService.loginWithEmail({ email: String(email), password: String(password) });
+  if (!result.ok) return errorResponse(res, result.status || 401, result.message || 'Invalid credentials');
+
+  const access_token = authService.issueAccessToken(result.user);
+  const is_onboarded = Boolean(result.user.profile_completed_at);
+  return res.json({
+    access_token,
+    refresh_token: result.refresh_token,
+    expires_in: env.accessTokenTtlSeconds,
+    user: {
+      id: result.user.id,
+      email: result.user.email,
+      display_name: [result.user.first_name, result.user.last_name].filter(Boolean).join(' '),
+      avatar_url: result.user.avatar_url,
+      role: result.user.role,
+      is_onboarded
+    },
+    is_new_user: false
+  });
+}
+
+module.exports = { social, completeProfile, refresh, logout, fcmToken, simpleGoogle, register, login };
 
 export { };
